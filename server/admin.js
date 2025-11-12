@@ -38,22 +38,24 @@ adminApp.get('/api/session', (req, res) => {
   res.json({
     authenticated: Boolean(req.session.isAdmin),
     userId: req.session.adminUser || null,
+    role: req.session.adminRole || null,
   });
 });
 
 adminApp.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+  const normalizedUsername = typeof username === 'string' ? username.trim() : '';
 
-  if (!username || !password) {
+  if (!normalizedUsername || !password) {
     return res.status(400).json({ error: '아이디와 비밀번호를 모두 입력해주세요.' });
   }
 
   try {
     const db = getPool();
-    const [rows] = await db.query(
-      'SELECT username, password_hash FROM users WHERE username = ? AND is_admin = 1',
-      [username]
-    );
+      const [rows] = await db.query(
+        "SELECT username, password_hash, role FROM users WHERE username = ? AND role = 'admin'",
+        [normalizedUsername]
+      );
 
     if (rows.length === 0) {
       return res.status(401).json({ error: '관리자 계정이 아니거나 비밀번호가 올바르지 않습니다.' });
@@ -67,6 +69,7 @@ adminApp.post('/api/login', async (req, res) => {
     }
 
     req.session.adminUser = storedUser.username;
+    req.session.adminRole = storedUser.role === 'admin' ? 'admin' : storedUser.role;
     req.session.isAdmin = true;
 
     res.json({ success: true });
@@ -99,10 +102,11 @@ function requireAdmin(req, res, next) {
 adminApp.get('/api/users', requireAdmin, async (req, res) => {
   try {
     const db = getPool();
-    const [rows] = await db.query('SELECT username, is_admin FROM users ORDER BY username');
+    const [rows] = await db.query('SELECT username, role, name FROM users ORDER BY username');
     const users = rows.map((row) => ({
       username: row.username,
-      isAdmin: row.is_admin === 1,
+      role: row.role,
+      name: row.name,
     }));
 
     res.json({ users });
@@ -113,21 +117,30 @@ adminApp.get('/api/users', requireAdmin, async (req, res) => {
 });
 
 adminApp.post('/api/users', requireAdmin, async (req, res) => {
-  const { username, password, isAdmin } = req.body;
+  const { username, password, role, name } = req.body;
+  const trimmedUsername = typeof username === 'string' ? username.trim() : '';
+  const trimmedName = typeof name === 'string' ? name.trim() : '';
 
-  if (!username || !password) {
+  if (!trimmedUsername || !password) {
     return res.status(400).json({ error: '아이디와 비밀번호를 모두 입력해주세요.' });
   }
 
+  if (!trimmedName) {
+    return res.status(400).json({ error: '사용자 이름을 입력해주세요.' });
+  }
+
+  const normalizedRole = role === 'admin' ? 'admin' : 'user';
+
   const hashedPassword = crypto.createHash('sha512').update(password).digest('base64');
-  const adminFlag = String(isAdmin) === 'true' || isAdmin === true ? 1 : 0;
 
   try {
     const db = getPool();
-    await db.query(
-      'INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)',
-      [username, hashedPassword, adminFlag]
-    );
+    await db.query('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)', [
+      trimmedUsername,
+      hashedPassword,
+      normalizedRole,
+      trimmedName,
+    ]);
 
     res.status(201).json({ success: true });
   } catch (error) {

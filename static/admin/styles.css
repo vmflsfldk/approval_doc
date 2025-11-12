@@ -54,14 +54,16 @@ label {
 }
 
 input[type='text'],
-input[type='password'] {
+input[type='password'],
+select {
   padding: 0.6rem 0.75rem;
   border: 1px solid #d0d5dd;
   border-radius: 0.4rem;
   font-size: 1rem;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: 2px solid #1f2a44;
   outline-offset: 1px;
 }

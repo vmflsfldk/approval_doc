@@ -8,7 +8,8 @@ This project renders archived Hiworks approval documents behind a small Express 
 * Access to a MariaDB instance that contains an `approvaldb.users` table with the following columns:
   * `username` (PRIMARY KEY)
   * `password_hash` (base64-encoded SHA-512 string)
-  * `is_admin` (`TINYINT(1)`, defaults to `0`)
+  * `role` (enum of `admin` or `user`)
+  * `name` (full name of the employee)
 * The archived document payloads located in the repository `data/` directory
 
 ## Installation
@@ -61,11 +62,12 @@ This project renders archived Hiworks approval documents behind a small Express 
 2. Insert the administrator into MariaDB:
 
    ```sql
-   INSERT INTO approvaldb.users (username, password_hash, is_admin)
-   VALUES ('admin_id', '위에서_생성한_해시', 1);
+   INSERT INTO approvaldb.users (username, password_hash, role, name)
+   VALUES ('admin_id', '위에서_생성한_해시', 'admin', '관리자_이름');
    ```
 
    이후 `http://localhost:3001/`에서 해당 계정으로 로그인한 뒤 필요한 사용자를 추가하거나 비밀번호를 변경할 수 있습니다.
+   일반 사용자는 `role`을 `user`로, `name`은 전자결재 문서의 기안자 이름과 동일하게 입력해야 본인이 기안한 문서만 열람할 수 있습니다.
 
 ## Development Notes
 

@@ -109,7 +109,9 @@ createUserForm.addEventListener('submit', async (event) => {
 
   const formData = new FormData(createUserForm);
   const payload = Object.fromEntries(formData.entries());
-  payload.isAdmin = formData.get('isAdmin') === 'on';
+  payload.username = (payload.username || '').trim();
+  payload.name = (payload.name || '').trim();
+  payload.role = payload.role === 'admin' ? 'admin' : 'user';
 
   try {
     await request('/api/users', {
@@ -131,7 +133,7 @@ updatePasswordForm.addEventListener('submit', async (event) => {
 
   const formData = new FormData(updatePasswordForm);
   const payload = { password: formData.get('password') };
-  const username = formData.get('username');
+  const username = (formData.get('username') || '').trim();
 
   try {
     await request(`/api/users/${encodeURIComponent(username)}/password`, {
@@ -167,7 +169,8 @@ async function refreshUsers() {
     users.forEach((user) => {
       const row = userRowTemplate.content.firstElementChild.cloneNode(true);
       row.querySelector('.username').textContent = user.username;
-      row.querySelector('.is-admin').textContent = user.isAdmin ? '예' : '아니오';
+      row.querySelector('.display-name').textContent = user.name || '-';
+      row.querySelector('.role').textContent = user.role === 'admin' ? '관리자' : '일반 사용자';
       fragment.appendChild(row);
     });
 
