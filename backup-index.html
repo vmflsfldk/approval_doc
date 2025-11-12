@@ -65,6 +65,11 @@
 
         .search-area .search-summary {
             padding-top: 16px;
+            display: none;
+        }
+
+        .search-area dl.search-meta {
+            display: none;
         }
 
         .search-area .search-conditions {
@@ -203,15 +208,15 @@
             </div>
             <section class="backup-list-wrap" id="leftmenu">
                 <section class="search-area">
-                	<dl>
+                        <dl class="search-meta">
                         <dt>구분: </dt>
                         <dd id="backup_type">결재 중</dd>
                     </dl>
-                    <dl>
+                    <dl class="search-meta">
                         <dt>기간: </dt>
                         <dd id="backup_date">-</dd>
                     </dl>
-                    <dl>
+                    <dl class="search-meta">
                         <dt>기안자: </dt>
                         <dd id="backup_register_name">-</dd>
                     </dl>
