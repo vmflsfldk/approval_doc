@@ -2,10 +2,13 @@ var $j = jQuery.noConflict();
 
 approvalClass = function()
 {
-	_this = this;
-	this.SEARCH_WORD = '';
-	this.PER_PAGE = 10;
-	this.PAGE = 1;
+        _this = this;
+        this.SEARCH_WORD = '';
+        this.SEARCH_DRAFTER = '';
+        this.SEARCH_START_DATE = '';
+        this.SEARCH_END_DATE = '';
+        this.PER_PAGE = 10;
+        this.PAGE = 1;
 	this.TOTAL_CNT = 0;
 	this.LAST_PAGE = 0;
 	this.DATA = [];
@@ -18,11 +21,14 @@ approvalClass = function()
 approvalClass.prototype = {
 	setData : function(documents, info)
 	{
-		_this.ALL_DOCUMENTS = _.isArray(documents) ? documents : [];
-		_this.BACKUP_INFO = info || null;
-		_this.SEARCH_WORD = '';
-		_this.PAGE = 1;
-		_this.TOTAL_CNT = 0;
+                _this.ALL_DOCUMENTS = _.isArray(documents) ? documents : [];
+                _this.BACKUP_INFO = info || null;
+                _this.SEARCH_WORD = '';
+                _this.SEARCH_DRAFTER = '';
+                _this.SEARCH_START_DATE = '';
+                _this.SEARCH_END_DATE = '';
+                _this.PAGE = 1;
+                _this.TOTAL_CNT = 0;
 		_this.DATA = [];
 		_this.LAST_PAGE = 0;
 		_this.DOCUMENT_DATA = null;
@@ -37,32 +43,119 @@ approvalClass.prototype = {
 			return;
 		}
 
-		$j('#backup_type').html(_this.BACKUP_INFO.name);
-		$j('#backup_date').html(_this.BACKUP_INFO.start_date + ' ~ ' + _this.BACKUP_INFO.end_date);
-		$j('#backup_register_name').html(_this.BACKUP_INFO.register_name);
-		$j('#backup_title').closest('p').append(_this.BACKUP_INFO.file_name);
-		_this.getData();
-		_this.loadPage();
-	},
+                $j('#backup_type').html(_this.BACKUP_INFO.name);
+                $j('#backup_date').html(_this.BACKUP_INFO.start_date + ' ~ ' + _this.BACKUP_INFO.end_date);
+                $j('#backup_register_name').html(_this.BACKUP_INFO.register_name);
+                $j('#backup_title').closest('p').append(_this.BACKUP_INFO.file_name);
+                _this.SEARCH_WORD = '';
+                _this.SEARCH_DRAFTER = '';
+                _this.SEARCH_START_DATE = (_this.BACKUP_INFO.start_date || '');
+                _this.SEARCH_END_DATE = (_this.BACKUP_INFO.end_date || '');
+                _this.PAGE = 1;
 
-	getData : function()
-	{
-		if(_this.SEARCH_WORD == ''){
-			_this.DATA = _this.pageLimit(_this.ALL_DOCUMENTS);
-			_this.TOTAL_CNT = _.size(_this.ALL_DOCUMENTS);
-		}else{
-			_this.DATA = _.filter(_this.ALL_DOCUMENTS, function(data){
-				return data.document_code.indexOf(_this.SEARCH_WORD) !== -1 || data.title.indexOf(_this.SEARCH_WORD) !== -1
-					|| data.user_name.indexOf(_this.SEARCH_WORD) !== -1 || data.node_name.indexOf(_this.SEARCH_WORD) !== -1;
-			});
+                var $searchWord = $j('#search_word');
+                if($searchWord.length > 0){
+                        $searchWord.val(_this.SEARCH_WORD);
+                }
 
-			_this.TOTAL_CNT = _.size(_this.DATA);
+                var $searchDrafter = $j('#search_drafter');
+                if($searchDrafter.length > 0){
+                        $searchDrafter.val(_this.SEARCH_DRAFTER);
+                }
 
-			if(_.size(_this.DATA) > _this.PER_PAGE){
-				_this.DATA = _this.pageLimit(_this.DATA);
-			}
-		}
-	},
+                var $startDate = $j('#search_start_date');
+                if($startDate.length > 0){
+                        $startDate.val(_this.SEARCH_START_DATE);
+                }
+
+                var $endDate = $j('#search_end_date');
+                if($endDate.length > 0){
+                        $endDate.val(_this.SEARCH_END_DATE);
+                }
+
+                _this.getData();
+                _this.loadPage();
+        },
+
+        getData : function()
+        {
+                var documents = _.isArray(_this.ALL_DOCUMENTS) ? _this.ALL_DOCUMENTS : [];
+                var filtered = documents;
+
+                if(_this.SEARCH_WORD !== ''){
+                        var keyword = _this.SEARCH_WORD.toLowerCase();
+                        filtered = _.filter(filtered, function(data){
+                                if(_.isEmpty(data)){
+                                        return false;
+                                }
+
+                                var documentCode = (data.document_code || '').toLowerCase();
+                                var title = (data.title || '').toLowerCase();
+                                var userName = (data.user_name || '').toLowerCase();
+                                var nodeName = (data.node_name || '').toLowerCase();
+
+                                return documentCode.indexOf(keyword) !== -1 || title.indexOf(keyword) !== -1
+                                        || userName.indexOf(keyword) !== -1 || nodeName.indexOf(keyword) !== -1;
+                        });
+                }
+
+                if(_this.SEARCH_DRAFTER !== ''){
+                        var drafterKeyword = _this.SEARCH_DRAFTER.toLowerCase();
+                        filtered = _.filter(filtered, function(data){
+                                if(_.isEmpty(data)){
+                                        return false;
+                                }
+
+                                var userName = (data.user_name || '').toLowerCase();
+                                return userName.indexOf(drafterKeyword) !== -1;
+                        });
+                }
+
+                if(_this.SEARCH_START_DATE !== ''){
+                        var startDate = _this.SEARCH_START_DATE;
+                        filtered = _.filter(filtered, function(data){
+                                if(_.isEmpty(data)){
+                                        return false;
+                                }
+
+                                var regDate = (data.regdate || '').substring(0, 10);
+
+                                if(regDate === ''){
+                                        return false;
+                                }
+
+                                return regDate >= startDate;
+                        });
+                }
+
+                if(_this.SEARCH_END_DATE !== ''){
+                        var endDate = _this.SEARCH_END_DATE;
+                        filtered = _.filter(filtered, function(data){
+                                if(_.isEmpty(data)){
+                                        return false;
+                                }
+
+                                var regDate = (data.regdate || '').substring(0, 10);
+
+                                if(regDate === ''){
+                                        return false;
+                                }
+
+                                return regDate <= endDate;
+                        });
+                }
+
+                _this.TOTAL_CNT = _.size(filtered);
+                _this.LAST_PAGE = Math.ceil(_this.TOTAL_CNT / _this.PER_PAGE);
+
+                if(_this.TOTAL_CNT === 0){
+                        _this.PAGE = 1;
+                }else if(_this.PAGE > _this.LAST_PAGE){
+                        _this.PAGE = _this.LAST_PAGE;
+                }
+
+                _this.DATA = _this.pageLimit(filtered);
+        },
 
 	loadPage : function()
 	{
@@ -150,20 +243,42 @@ approvalClass.prototype = {
 		$j('.paginate').html(html);
 	},
 	
-	setPage : function(page)
-	{
-		_this.PAGE = page;
-		_this.getData();
-		_this.loadPage();
-	},
-	
-	searchDocument : function()
-	{
-		_this.PAGE = 1;
-		_this.SEARCH_WORD = $j('#search_word').val();
-		_this.getData();
-		_this.loadPage();
-	},
+        setPage : function(page)
+        {
+                _this.PAGE = page;
+                _this.getData();
+                _this.loadPage();
+        },
+
+        validateDateRange : function(startDate, endDate)
+        {
+                if(startDate !== '' && endDate !== '' && startDate > endDate){
+                        alert('시작일은 종료일보다 늦을 수 없습니다.');
+                        return false;
+                }
+
+                return true;
+        },
+
+        searchDocument : function()
+        {
+                var searchWord = $j.trim($j('#search_word').val() || '');
+                var searchDrafter = $j.trim($j('#search_drafter').val() || '');
+                var startDate = $j('#search_start_date').val() || '';
+                var endDate = $j('#search_end_date').val() || '';
+
+                if(!_this.validateDateRange(startDate, endDate)){
+                        return;
+                }
+
+                _this.PAGE = 1;
+                _this.SEARCH_WORD = searchWord;
+                _this.SEARCH_DRAFTER = searchDrafter;
+                _this.SEARCH_START_DATE = startDate;
+                _this.SEARCH_END_DATE = endDate;
+                _this.getData();
+                _this.loadPage();
+        },
 	
 	getDocument : function(document_no)
 	{
@@ -400,16 +515,42 @@ approvalClass.prototype = {
 
 var Approval = new approvalClass();
 
-$j(document).ready(function(){	
-	Approval.init();
-	
-	$j(document).on('keydown', '#search_word', function(e){
-		if(e.keyCode === 13){
-			Approval.searchDocument();
-		}
-	});
-	
-	$j("#drag").draggable({
+$j(document).ready(function(){
+        Approval.init();
+
+        $j(document).on('submit', '#documentFilterForm', function(e){
+                e.preventDefault();
+                Approval.searchDocument();
+        });
+
+        $j(document).on('keydown', '#search_word, #search_drafter, #search_start_date, #search_end_date', function(e){
+                if(e.keyCode === 13){
+                        e.preventDefault();
+                        Approval.searchDocument();
+                        return false;
+                }
+        });
+
+        $j(document).on('change', '#search_start_date, #search_end_date', function(){
+                var startDate = $j('#search_start_date').val() || '';
+                var endDate = $j('#search_end_date').val() || '';
+
+                if(!Approval.validateDateRange(startDate, endDate)){
+                        $j(this).val('');
+                        $j(this).focus();
+                }
+        });
+
+        $j(document).on('click', '#reset_document_filters', function(){
+                var backupInfo = Approval.BACKUP_INFO || {};
+                $j('#search_word').val('');
+                $j('#search_drafter').val('');
+                $j('#search_start_date').val(backupInfo.start_date || '');
+                $j('#search_end_date').val(backupInfo.end_date || '');
+                Approval.searchDocument();
+        });
+
+        $j("#drag").draggable({
         containment: "#drag_wrap",
         scroll: false,
         axis: "x"

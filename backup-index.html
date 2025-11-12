@@ -211,12 +211,21 @@
                             백업 파일 검색
                         </legend>
                         <div class="data-search">
-                            <div class="search" style="background-position: 0px 0px; border-color: rgb(192, 197, 202);">
-                                <fieldset>
-                                    <input type="text" id="search_word" autocomplete="off" maxlength="30" value="" placeholder="문서 검색">
-                                    <span class="btn_search" onclick="Approval.searchDocument();"><span class="icon src"><em class="blind">검색</em></span></span>
-                                </fieldset>
-                            </div>
+                            <form id="documentFilterForm" class="document-filters" novalidate>
+                                <label class="blind" for="search_word">문서 검색</label>
+                                <input type="text" id="search_word" autocomplete="off" maxlength="30" value="" placeholder="문서 검색">
+                                <label class="blind" for="search_drafter">기안자 검색</label>
+                                <input type="text" id="search_drafter" autocomplete="off" maxlength="30" value="" placeholder="기안자">
+                                <div class="filter-group">
+                                    <label class="blind" for="search_start_date">검색 시작일</label>
+                                    <input type="date" id="search_start_date">
+                                    <span class="filter-separator" aria-hidden="true">~</span>
+                                    <label class="blind" for="search_end_date">검색 종료일</label>
+                                    <input type="date" id="search_end_date">
+                                </div>
+                                <button type="submit" class="btn_search"><span class="icon src"><em class="blind">검색</em></span></button>
+                                <button type="button" id="reset_document_filters" class="btn_reset">초기화</button>
+                            </form>
                         </div>
                     </fieldset>
                 </section>
