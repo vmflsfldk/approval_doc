@@ -31,14 +31,14 @@
                     return Promise.reject(new Error('Unauthenticated'));
                 }
 
-                return fetchJson('/api/documents');
+                return fetchJson('/api/documents?page=1&perPage=10');
             })
             .then(function (payload) {
                 if (typeof Approval === 'undefined') {
                     throw new Error('Approval viewer is not available.');
                 }
 
-                Approval.setData(payload.documents, payload.info);
+                Approval.setData(payload.documents, payload.info, payload.pagination);
                 Approval.init();
             })
             .catch(function (error) {

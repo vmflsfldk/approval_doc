@@ -3,10 +3,9 @@ require('dotenv').config();
 const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
-const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const { getPool } = require('./db');
+const { getBackupInfo, queryDocuments } = require('./dataAccess');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -93,82 +92,45 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-let cachedDocuments = null;
-
-function discoverDataChunks() {
-  const entries = fs.readdirSync(DATA_DIR);
-  return entries
-    .filter((file) => /^data\d+\.js$/.test(file) && file !== 'data_info.js')
-    .sort((a, b) => {
-      const numA = parseInt(a.match(/\d+/)[0], 10);
-      const numB = parseInt(b.match(/\d+/)[0], 10);
-      return numA - numB;
-    });
-}
-
-function readDataset(filename, exportName) {
-  const filePath = path.join(DATA_DIR, filename);
-  const scriptContent = fs.readFileSync(filePath, 'utf-8');
-  const context = {};
-  vm.createContext(context);
-  vm.runInContext(scriptContent, context, { filename: filePath });
-
-  if (!(exportName in context)) {
-    throw new Error(`Expected ${exportName} to be defined in ${filename}`);
-  }
-
-  return context[exportName];
-}
-
-function loadDocuments() {
-  if (!cachedDocuments) {
-    const chunkFiles = discoverDataChunks();
-    const documents = [];
-
-    chunkFiles.forEach((file) => {
-      try {
-        const chunk = readDataset(file, 'HIWORKS_DATA');
-        if (!Array.isArray(chunk)) {
-          throw new Error('Chunk did not export an array');
-        }
-        documents.push(...chunk);
-      } catch (error) {
-        console.error(`Failed to load data chunk ${file}:`, error);
-        throw error;
-      }
-    });
-
-    cachedDocuments = {
-      documents,
-      info: readDataset('data_info.js', 'BACKUP_INFO'),
-    };
-  }
-
-  return cachedDocuments;
-}
-
 app.get('/api/documents', (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: '인증이 필요합니다.' });
   }
 
   try {
-    const { documents, info } = loadDocuments();
     const isAdmin = req.session.userRole === 'admin';
     const userName = req.session.displayName;
+    const page = parseInt(req.query.page, 10) || 1;
+    const perPage = parseInt(req.query.perPage, 10) || 10;
+    const searchWord = typeof req.query.searchWord === 'string' ? req.query.searchWord : '';
+    const searchDrafter = typeof req.query.searchDrafter === 'string' ? req.query.searchDrafter : '';
+    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : '';
+    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : '';
 
-    const filteredDocuments = isAdmin
-      ? documents
-      : documents.filter((doc) => {
-          if (!doc || !doc.user_name || !userName) {
-            return false;
-          }
+    const { documents, total, page: normalizedPage, perPage: normalizedPerPage } = queryDocuments({
+      page,
+      perPage,
+      isAdmin,
+      userName,
+      filters: {
+        searchWord,
+        searchDrafter,
+        startDate,
+        endDate,
+      },
+    });
 
-          return doc.user_name.trim() === userName.trim();
-        });
+    const info = getBackupInfo();
 
-    res.json({ documents: filteredDocuments, info });
+    res.json({
+      documents,
+      info,
+      pagination: {
+        total,
+        page: normalizedPage,
+        perPage: normalizedPerPage,
+      },
+    });
   } catch (error) {
     console.error('Document load error:', error);
     res.status(500).json({ error: '문서를 불러오는 중 오류가 발생했습니다.' });
