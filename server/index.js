@@ -79,7 +79,7 @@ app.post('/api/login', async (req, res) => {
 
   try {
     const db = getPool();
-    const [rows] = await db.query('SELECT id, password FROM users WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT username, password_hash FROM users WHERE username = ?', [id]);
 
     if (rows.length === 0) {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
@@ -88,11 +88,11 @@ app.post('/api/login', async (req, res) => {
     const storedUser = rows[0];
     const hashedPassword = crypto.createHash('sha512').update(password).digest('base64');
 
-    if (storedUser.password !== hashedPassword) {
+    if (storedUser.password_hash !== hashedPassword) {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
 
-    req.session.userId = storedUser.id;
+    req.session.userId = storedUser.username;
     res.json({ success: true });
   } catch (error) {
     console.error('Login error:', error);
