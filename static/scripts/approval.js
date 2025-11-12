@@ -46,7 +46,6 @@ approvalClass.prototype = {
                 $j('#backup_type').html(_this.BACKUP_INFO.name);
                 $j('#backup_date').html(_this.BACKUP_INFO.start_date + ' ~ ' + _this.BACKUP_INFO.end_date);
                 $j('#backup_register_name').html(_this.BACKUP_INFO.register_name);
-                $j('#backup_title').closest('p').append(_this.BACKUP_INFO.file_name);
                 _this.SEARCH_WORD = '';
                 _this.SEARCH_DRAFTER = '';
                 _this.SEARCH_START_DATE = (_this.BACKUP_INFO.start_date || '');
@@ -75,6 +74,7 @@ approvalClass.prototype = {
 
                 _this.getData();
                 _this.loadPage();
+                _this.renderSearchConditions();
         },
 
         getData : function()
@@ -157,11 +157,11 @@ approvalClass.prototype = {
                 _this.DATA = _this.pageLimit(filtered);
         },
 
-	loadPage : function()
-	{
-		$j('#backup_list_table tbody').empty();
-		
-		if(_.isEmpty(_this.DATA)){
+        loadPage : function()
+        {
+                $j('#backup_list_table tbody').empty();
+
+                if(_.isEmpty(_this.DATA)){
 			alert('데이터가 없습니다.');
 			$j('#backup_list_table tbody').html('<tr align="center"><td>데이터가 없습니다.</td></tr>');
 			$j('.paginate').hide();
@@ -175,13 +175,36 @@ approvalClass.prototype = {
 			_this.getDocument(_this.DATA[0].no);
 			$j('.paginate').show();
 		}
-		
-		_this.pageNavi();
-	},
-	
-	pageLimit : function(obj)
-	{
-		var results = [];
+
+                _this.pageNavi();
+        },
+
+        renderSearchConditions : function()
+        {
+                if(!_this.BACKUP_INFO){
+                        return;
+                }
+
+                var backupInfo = _this.BACKUP_INFO;
+                var startDate = _this.SEARCH_START_DATE || backupInfo.start_date || '';
+                var endDate = _this.SEARCH_END_DATE || backupInfo.end_date || '';
+
+                var periodStart = startDate !== '' ? startDate : '전체';
+                var periodEnd = endDate !== '' ? endDate : '전체';
+                var conditions = [];
+
+                conditions.push('구분 ' + (backupInfo.name || '전체'));
+                conditions.push('기간 ' + periodStart + ' ~ ' + periodEnd);
+                conditions.push('기안자 ' + (_this.SEARCH_DRAFTER !== '' ? _this.SEARCH_DRAFTER : '전체'));
+                conditions.push('검색어 ' + (_this.SEARCH_WORD !== '' ? _this.SEARCH_WORD : '없음'));
+
+                var summary = '조회 조건: ' + conditions.join(' / ');
+                $j('#backup_title').text(summary);
+        },
+
+        pageLimit : function(obj)
+        {
+                var results = [];
 
 		if(obj == null) return results;
 
@@ -278,6 +301,7 @@ approvalClass.prototype = {
                 _this.SEARCH_END_DATE = endDate;
                 _this.getData();
                 _this.loadPage();
+                _this.renderSearchConditions();
         },
 	
 	getDocument : function(document_no)

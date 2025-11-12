@@ -59,6 +59,18 @@
             width: 16px;
             height: 14px;
             display: inline-block;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .search-area .search-summary {
+            padding-top: 16px;
+        }
+
+        .search-area .search-conditions {
+            display: inline-block;
+            vertical-align: middle;
+            color: #333;
         }
         
         .search-area p {
@@ -203,8 +215,9 @@
                         <dt>기안자: </dt>
                         <dd id="backup_register_name">-</dd>
                     </dl>
-                    <p>
-                        <span class="icon-file" id="backup_title"></span>
+                    <p class="search-summary">
+                        <span class="icon-file"></span>
+                        <span id="backup_title" class="search-conditions">조회 조건: -</span>
                     </p>
                     <fieldset>
                         <legend>
