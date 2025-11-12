@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="Content-Script-Type" content="text/javascript">
+    <meta http-equiv="Content-Style-Type" content="text/css">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>전자결재 백업 목록</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="static/css/style_new.css">
+    <link rel="stylesheet" href="static/css/style_approval.css">
+    <script src="static/scripts/jquery-1.11.2.min.js" type="text/javascript"></script>
+    <script src="static/scripts/jquery-ui.min.js" type="text/javascript"></script>
+    <script src="static/scripts/jquery.tmpl.min.js" type="text/javascript"></script>
+    <script src="data/data.js" type="text/javascript"></script>
+	<script src="data/data_info.js" type="text/javascript"></script>
+	<script src="static/scripts/approval.js" type="text/javascript"></script>
+	<script src="static/scripts/template.js" type="text/javascript"></script>
+	<script src="static/scripts/underscore-min.js" type="text/javascript"></script>
+	<script src="static/scripts/common.js" type="text/javascript"></script>
+    
+    <style>
+        #drag_wrap {
+            left: 315px;
+        }
+        #leftmenu {
+            width: 320px;
+        }
+        
+        #contents {
+            left: 320px;
+            border-left: 1px solid #dedede;
+        }
+        
+        .search-area {
+            position: relative;
+            padding: 25px 25px 0;
+            margin: 0 auto;
+            overflow: hidden;
+            zoom: 1;
+        }
+        
+        .search-area dt,
+        .search-area dd {
+            display: inline-block;
+            padding-bottom: 5px;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .search-area dt {
+            font-weight: bold;
+        }
+        
+        .search-area .icon-file {
+            background: url('static/images/icon-file.png') 0 50% no-repeat;
+            width: 16px;
+            height: 14px;
+            display: inline-block;
+        }
+        
+        .search-area p {
+            padding-top: 16px;
+            color: #666;
+            /* width: 245px; */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .backup-list {
+            position: absolute;
+            top: 212px;
+            height: auto;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: 0;
+            background: #fff;
+            padding: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .data-search .search {
+            width: 100%;
+            margin-top: 20px;
+            background: #fff;
+        }
+        
+        .data-search .search input[type="text"] {
+            float: left;
+            width: 200px;
+            border: 0;
+            margin: 1px 1px 1px 9px;
+            padding: 4px 4px 4px 0;
+            color: #999;
+            vertical-align: top;
+            line-height: 19px;
+            height: 19px;
+            outline: none;
+            color: #000;
+        }
+        
+        .backup-list table {
+            width: 100%;
+        }
+        
+        .backup-list td {
+            padding: 20px 25px;
+            font-size: 14px;
+            border-bottom: 1px solid #ececec;
+            letter-spacing: -1px;
+        }
+        
+        .backup-list .docu-case {}
+        
+        .backup-list .docu-title {
+            padding-top: 5px;
+            overflow: hidden;
+        }
+        
+        .backup-list .docu-title a {
+            display: block;
+            float: left;
+            width: 245px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .backup-list .docu-info {
+            padding-top: 10px
+        }
+        
+        .backup-list .docu-writer {
+            float: left;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .backup-list .docu-date {
+            float: right;
+        }
+        
+        .listbottom {
+            min-width: auto;
+            border-top: 0;
+        }
+        
+        .icon {
+            background: url(static/images/sp_icon.png) 0 0 no-repeat;
+        }
+        
+        .paginate strong,
+        .paginate>a,
+        .paginate>span>span {
+            margin-left: 12px;
+        }
+        
+        .input-pagenum {
+            margin-left: 12px;
+        }
+        
+        .paginate span {
+            padding: 0;
+        }
+        
+        .paginate>span>span.all-pangenum {
+            margin-left: 0;
+        }
+        
+        .selected_document {
+        	background-color: #f9f9f9;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+            <h1 class="logo">
+                <a href=""><img src="static/images/logo.png" alt=""></a>
+            </h1>
+        </header>
+        <div id="container">
+        	<div id="drag_wrap">
+                <div id="drag"></div>
+            </div>
+            <section class="backup-list-wrap" id="leftmenu">
+                <section class="search-area">
+                	<dl>
+                        <dt>구분: </dt>
+                        <dd id="backup_type">결재 중</dd>
+                    </dl>
+                    <dl>
+                        <dt>기간: </dt>
+                        <dd id="backup_date">-</dd>
+                    </dl>
+                    <dl>
+                        <dt>기안자: </dt>
+                        <dd id="backup_register_name">-</dd>
+                    </dl>
+                    <p>
+                        <span class="icon-file" id="backup_title"></span>
+                    </p>
+                    <fieldset>
+                        <legend>
+                            백업 파일 검색
+                        </legend>
+                        <div class="data-search">
+                            <div class="search" style="background-position: 0px 0px; border-color: rgb(192, 197, 202);">
+                                <fieldset>
+                                    <input type="text" id="search_word" autocomplete="off" maxlength="30" value="" placeholder="문서 검색">
+                                    <span class="btn_search" onclick="Approval.searchDocument();"><span class="icon src"><em class="blind">검색</em></span></span>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </fieldset>
+                </section>
+                <section class="backup-list">
+                    <table id="backup_list_table">
+                        <tbody>
+                            <tr>
+                                <td>데이터가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="listbottom">
+                        <div class="paginate"></div>
+                    </div>
+                </section>
+            </section>
+            <section class="backup-view" id="contents">
+                <div class="content_title">
+                    <form>
+                        <fieldset>
+                            <span class="detail_select">
+                                <a href="javascript:void(0);" onclick="Approval.documentPrint();">인쇄</a>
+                            </span>
+                            <span class="detail_select">
+                                <a href="javascript:void(0);" class="hide" id="btn_print_only_content" onclick="Approval.documentPrint('PRINT_CONTENT');">본문인쇄</a>
+                            </span>
+                        </fieldset>
+                    </form>
+                </div>
+                <div class="content_inbox">
+                    <!-- Contents -->
+                    <div class="cont_box view">
+                        <div class="approval-wrap write view">
+                            <h1 id="document_form_title"></h1><!-- 양식 제목 -->
+                            <div id="document_basic_info"></div><!-- 결재선 -->
+
+                            <div class="docu-common-wrap">
+                                <h2 id="document_content_title"></h2><!-- 문서 제목 -->
+                                <div class="contents after" id="document_contents"></div>
+
+                                <div class="file after" id="document_attached_files" style="display:none;">
+                                    <div class="top">
+                                        <span class="body-color mgr_20">별첨</span>
+                                    </div>
+                                    <div class="filebox" style="max-width:95%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="divCommentArea">
+	                        <div class="board_comment_tab" id="approvalCommentsTab">
+								<a href="javascript:void(0);" class="gt-nav-item gt-active approval-comments-tab1" data-id="tab1-1" onclick="Approval.getApprovalComments();">의견</a>
+					        	<a href="javascript:void(0);" class="gt-nav-item approval-comments-tab2" data-id="tab1-2" onclick="Approval.getApprovalCommentsHistory();">이력</a>
+							</div>
+	
+	                        <div id="document_approval_comments" class="board_comment approval">
+	                            <p class="top number_comments">
+		    						<span class="point_color bold" id="approvalCommentsCount">0</span>개의 의견	    	
+		    					</p>
+	                            <ul id="approvalComments"></ul>
+	                        </div>
+	                        
+	                        <div id="divApprovalCommentsHistory" class="board_comment approval hide" style="display: none;">
+								<ul id="approvalCommentsHistory"></ul>
+							</div>
+						</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    <div id="print_document"></div>
+</body>
+
+</html>

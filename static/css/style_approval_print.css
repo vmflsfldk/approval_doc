@@ -1,0 +1,262 @@
+@charset "utf-8";
+/* Print Page  */
+html {overflow:inherit !important;}
+.print-wrap {letter-spacing:-0.4px;margin: 18mm;}
+.print-wrap .default {background: #fff;margin-left: 20px;padding: 5px 20px 6px; border: 1px solid #c8c8c8;color: #2c86dc;position: relative;top:-3px;}
+.print-wrap .print-area {width: 100%;table-layout: fixed;}
+.print-wrap h1 {padding-bottom:1cm;font-size:24pt;color: #121212;}
+/*.print-wrap table {page-break-inside:avoid;}*/
+.docu-info .list {float: left;font-size:8pt;width: 7.2cm;}
+.docu-info .list dt {float: left;clear:both;width:2.8cm;padding-bottom: 0.32cm;font-weight: bold;color: #121212;}
+.docu-info .list dd {float: left;width:4cm;padding-bottom:0.32cm;color: #121212;}
+.docu-info .approval {float:right;width:9.65cm;}
+.docu-info .approval h2,
+.docu-info .agree h2,
+.docu-info .finance h2,
+.docu-info .refer h2,
+.docu-info .confer h2,
+.docu-files h2,
+.docu-comments h2  {padding-bottom:0.2cm;font-size:8pt;color: #121212;}
+.docu-info .second-line {padding-top:0.4cm;}
+.docu-info .agree {float: left;width:9.85cm;}
+.docu-info .agree.no-finance {float: left;width:inherit;}
+.docu-info .finance.no-agree {float: right;}
+.docu-info .finance.no-agree table {width:auto;}
+.docu-info .finance.no-agree table th{width:1.65cm;}
+.docu-info .finance {float: right;}
+.docu-info .finance table {width:auto;}
+.docu-info .finance table th{width:1.65cm;}
+.docu-info .confer {float: right;width:9.65cm;}
+.docu-info .refer {padding-top:0.4cm}
+.docu-info table {width:100%;table-layout:fixed;border-top:0.5pt solid #595959;border-bottom:0.5pt solid #595959;border-left:0.2pt solid #666;border-right:0.2pt solid #666;}
+.docu-info .refer table {border-left:0;border-right:0;}
+.docu-info th {height: 0.65cm;font-size: 8pt;color: #000;font-weight: normal;border-left:0.2pt solid #666;word-break:break-all;}
+.docu-info td {height:0.59cm;padding:0.08cm 0;font-size: 8pt;color: #000;text-align: center;border-top:0.2pt solid #666;border-left:0.2pt solid #666;border-bottom: 0.2pt solid #666;line-height: 10pt;word-break:break-all;}
+.docu-info tr:last-child td {border-bottom:0.5pt solid #595959;}
+.docu-info td.stamp {height:1.29cm;vertical-align: middle;padding: 0}
+.docu-info td.stamp .icon-layer {height: 100%;width: 100%;position: relative;vertical-align: top;}
+.docu-info td.stamp .icon-layer .icon-text {display: inline-block;position: absolute;top:-1px;left:-1px;padding: 0 6px;/*background: #8b98a1;color: #fff;*/z-index: 10;border:1px solid #000;}
+.docu-info td.stamp.slash .icon-layer .icon-text + .date {position: absolute;top: inherit;left: 0;bottom:4px;width: 100%;}
+.docu-info td.stamp.slash .icon-layer .icon-text + .date + img {position: absolute;top:4px;right:13px;}
+.docu-info td.stamp.slash-view .icon-layer .icon-text + .date {position: absolute;top: inherit;left: 0;bottom:4px;width: 100%;}
+.docu-info td.stamp.slash-view .icon-layer .icon-text + .date + img {position: absolute;top:4px;right:13px;}
+.docu-info .date {font-size: 6pt;}
+.docu-info tr th:first-child,
+.docu-info tr td:first-child {border-left: 0;}
+.docu-info .agree td {padding:0 0 0 0.15cm;text-align: left;height:0.9cm;}
+.docu-info .agree tr:nth-child(3n + 0) td {height: 0.85cm;}
+.docu-info .agree td img {width:0.6cm;height:0.6cm;vertical-align: middle;float: right;margin-right: 0.15cm;}
+.docu-info .agree td span {line-height: 13px;}
+.docu-info .refer.third {padding-top: 0.6cm}
+.docu-info .refer.third h2, .docu-info .refer.forth h2 {padding-bottom: 0}
+.docu-info .refer td {padding:6px 0 6px 8px;text-align: left;}
+.docu-info .refer tr:last-child td {border-bottom: 0.2pt solid #666;}
+.docu-info .refer td span {padding-right: 18px; word-break: normal; word-wrap: break-word; display: inline-block;}
+.docu-info .refer .refer-line {font-size: 8pt;color: #121212;}
+.docu-info .refer .refer-line span {padding-left: 4pt; word-break: normal; word-wrap: break-word; display: inline-block;}
+.docu-contents {padding-top:1cm;}
+.docu-contents h2 {font-size: 14pt;color: #121212;}
+.docu-contents .text {padding-top: 18px;font-size: 11pt;line-height:2;color: #121212;}
+.docu-contents .text table td {font-size: 11pt;color: #121212;word-break: break-all;}
+.docu-contents .text table:not([border]) td {border: 1px solid #000;}
+.docu-contents .text #style_free table td {border: none;}
+.docu-contents .text sub {font-size:smaller;vertical-align:sub;}
+.docu-contents .text sup {font-size:smaller;vertical-align:super;}
+.docu-contents .text ol {list-style-type: decimal;}
+.docu-contents .text ol, .docu-contents .text dl,
+.docu-contents .text ul, .docu-contents .text menu, .docu-contents .text dir {padding:0 40px;margin:1em 0;}
+.docu-contents .text ul {display: block;list-style-type: disc;margin-top: 1em;margin-bottom: 1em;margin-left: 0;margin-right: 0;padding-left: 40px;}
+.docu-contents .text blockquote {margin:1em 40px;}
+.docu-contents .text h1 {font-size:2em;}
+.docu-contents .text h2 {font-size:1.5em;}
+.docu-contents .text h3 {font-size:1.17em;}
+.docu-contents .text h4 {font-size:1em;}
+.docu-contents .text h5 {font-size:0.83em;}
+.docu-contents .text h6 {font-size:0.67em;}
+.docu-contents .text big {font-size:larger;}
+.docu-contents .text small {font-size:smaller;}
+.docu-contents .db-list {padding-top: 18px;padding-bottom: 18px;border-bottom:1px solid #000;}
+.docu-contents li {display: list-item;list-style: inherit;}
+.docu-contents .account table {margin-top: 0.4cm;table-layout: fixed;border-collapse: collapse;width: 100%;border: 1px solid #000;color: #000;}
+.docu-contents .account th {padding: 6px;font-weight: normal;color: #000;border-left: 1px solid #000;border-bottom: 1px solid #000;}
+.docu-contents .account td {padding: 6px;color: #000;border-left: 1px solid #000;border-bottom: 1px solid #000;}
+.docu-contents .account h3 {margin-top: 0.4cm;color: #000;font-size: 11pt;}
+.docu-files  {padding-top: 37px;}
+.docu-comments {padding-top: 37px;padding-bottom: 37px;}
+.docu-files table, .docu-comments table {width: 100%;border-top: 1px solid #000;border-bottom: 1px solid #000;}
+.docu-comments td {padding:8px;font-size: 8pt;vertical-align: top;}
+.docu-comments td:first-child {width:15%;}
+.docu-files td {padding: 8px;font-size: 10px;color: #000;line-height: 2}
+.docu-comments td {padding: 8px;font-size: 8pt;color: #000;line-height:14pt}
+.docu-comments .date {color: #645f5c;}
+.docu-files td span {padding-right:0.8cm;font-size: 8pt;}
+.docu-files td span img {vertical-align: middle;width:0.5cm;height:0.5cm;margin-right: 0.2cm;}
+.docu-files td span img.attached {width:11px;height:13px;}
+.docu-info .fr-wrap {float: right;width:9.65cm;}
+.docu-info .fr-wrap .refer {padding-top: 20px;}
+.docu-info .fr-wrap .refer:first-child {padding-top: 0;}
+.docu-info .fr-wrap .circulated td {height:2.2cm;vertical-align: top;}
+.slash{background:url('../images/slash.png');background-size:100% 100%;}
+
+/* 회람 수정 */
+.view-in-view h2 {margin-top: 50px;text-align: center;font-weight: normal;font-size:22px;color: #333;}
+.view-in-view .original {position: relative;}
+.view-in-view .original hr {margin: 32px 0 0 0;padding: 0;border:none;border-bottom: 1px solid #ececec;}
+.view-in-view .original p {position: absolute;left:50%;top:-8px;background: #fff;padding:0 10px;margin-left: -24px;color: #acacac;font-size: 14px;}
+.orgin-area {margin-top: 27px;padding: 0 20px 50px;border-bottom: 1px solid #ececec;}
+.docu-common-wrap .contents .orgin-area {padding-bottom:0;}
+.orgin-area table, .docu-common-wrap .contents .orgin-area table {table-layout: fixed;border-collapse: collapse;width: 100%;border:1px solid #cdcdcd;color: #666;}
+.orgin-area table td  {border-right:1px solid #cdcdcd;border-bottom:1px solid #cdcdcd;padding-left: 10px;}
+.docu-common-wrap .contents .orgin-area table td {border:1px solid #cdcdcd;padding-left: 10px;font-size: 14px;color: #666;}
+.orgin-area table td .name, .docu-common-wrap .contents .orgin-area table td .name {margin-right: 12px;}
+.orgin-area table .bbn > td, .docu-common-wrap .contents .orgin-area table .bbn > td {border-bottom:0;}
+.orgin-area table .header, .docu-common-wrap .contents .orgin-area table .header  {padding: 10px 0;width: 134px;font-weight: bold;text-align: center;}
+.orgin-area h3 {margin-top: 20px;font-size:22px;font-weight: normal;color: #333;}
+.orgin-area .contents {margin-top: 20px;color: #333;font-size: 16px;line-height: 1.8;}
+.docu-common-wrap .contents .orgin-area .contents {margin-top: 20px;padding: 0;color: #333;font-size: 16px;line-height: 1.8;border-bottom: 0;}
+.view-in-view .file {padding:20px 25px;}
+.view-in-view .file .addfile {color: #779ec0;}
+.view-in-view .file .addfile:hover {font-weight:bold;}
+.view-in-view .file .filebox{/*float:left;max-width:89%;*/margin-right:25px;margin-top:9px;padding-right:25px;/*border-right:1px solid #eceeef;*/}
+.view-in-view .file .filebox .icon.file {display:inline-block;padding:0;}
+.view-in-view .file .filebox .docu-link {display:inline-block;margin-bottom:5px;text-decoration:underline;color:#2c86dc;}
+.view-in-view .file .filebox .docu-link + .file_delete {margin-right:10px;}
+.view-in-view .file .filebox .cont_file img {vertical-align: middle;}
+.view-in-view .file .filebox + .icon.submit {margin-top:12px;}
+
+#cke_div {overflow-x:auto;overflow-y:auto;position:relative;*position: static;display: inline;}
+
+/* 회람 뷰 수정 */
+.docu-common-wrap .contents .view-in-view {margin-left: -25px;width: calc(100% + 50px);line-height: normal;font-size: 14px;}
+.docu-common-wrap .contents .view-in-view h2 {padding: 0;}
+.docu-common-wrap .contents.circulation {padding-bottom: 0;}
+
+/* 회계연동 추가 */
+.tableType01.account {margin-bottom: 20px;}
+.tableType01.mgb10 {margin-bottom: 10px;}
+.tableType01 .account-total {text-align: center;padding: 12px 0;border-top:1px solid #eee;}
+.listbottom.mid-width,
+.tableType01.mid-width {width: 780px;}
+.approval-wrap .tableType02.account {border-left:0;border-right:0;}
+.tableType02.account input[type="text"] {padding-left: 12px;height: 26px;border: 1px solid #cfcfcf;}
+.tableType02.account .account-add {width: 125px;padding-left: 12px;height: 28px;border: 1px solid #cfcfcf;background: #f7f7f7;}
+.tableType02.account .to-item {position: relative;}
+.tableType02.account .up {top:4px;left:175px;cursor: pointer;}
+.tableType02.account .down {top:4px;left:148px; cursor: pointer;}
+.docu-common-wrap .account-area h3 {padding-bottom: 14px;font-size: 14px;color: #333;}
+.docu-common-wrap .account-area .account th {padding: 6px 0;border: 1px solid #cdcdcd;background: #fff;color: #333;text-align: center;font-weight: bold;}
+.docu-common-wrap .account-area .account td {padding: 6px 10px;border: 1px solid #cdcdcd;font-size: 14px;color: #333;}
+.docu-common-wrap .account-area .account tr:hover {background:none;}
+.tabType1 li {float: left;margin: 5px 8px 0;padding: 5px 12px 12px;text-align: center;}
+.setting_field.approval .reg-form {padding: 35px 0 20px;}
+.setting_field.approval .reg-form h4 {padding: 5px 50px 0 0;}
+.setting_field.approval .reg-form input[type="text"] {background: #ebebe4;border: 1px #cfcfcf solid;padding: 0 4px;color: #444;height: 28px;line-height: 27px;}
+.data-search .search {position: relative; width: 200px; height: 30px; border: 1px #c0c5ca solid; border-radius: 15px;}
+.data-search .search input[type="text"] {float: left;width: 160px;border: 0;margin: 1px 1px 1px 9px;padding: 4px 4px 4px 0;color: #999;vertical-align: top;line-height: 19px;height: 19px;outline: none;color: #000;}
+.data-search .btn_search {float: right;margin: 8px 8px 0 0;}
+.icon_excel_down {display: inline-block;margin-top: 3px;width: 26px;height: 26px;background: url(/static/images/insa/spr_insa_icon.png) -9px 1px no-repeat;}
+.send-date {margin-top: 15px;padding: 15px;width: 290px;background: #f9f9fa;}
+.send-date .icon.file_delete {cursor: pointer}
+.send-date li {line-height: 1.8}
+.layer_box.account {width:688px;}
+.layer_box.account table {table-layout:fixed;}
+.layer_box.account .tableType02 {border-bottom: }
+.layer_box.account .tableType02 th {padding:9px 0;border-bottom: 1px solid #ececec;}
+.layer_box.account .tableType02 td {padding:3px 0 3px 10px;border-bottom: 1px solid #ececec;}
+.layer_box.account .tableType02 tr:last-child th,
+.layer_box.account .tableType02 tr:last-child td  {border-bottom: 1px solid #dedede;}
+.layer_box.account input[type="text"] {width: 176px;padding-left: 12px;height: 28px;border: 1px solid #cfcfcf;}
+.layer_box.account select {width: 190px;height: 30px;padding-left: 10px;border: 1px solid #cfcfcf;}
+.layer_box.account .account-add {width: 125px;background: #f7f7f7;}
+.layer_box.account input[type="text"].cal {width: 150px;}
+.layer_box.account.middle {width: 538px;}
+
+/* 테이블 정의(gtris) */
+.gt-input-group {padding: 6px 0}
+.gt-cell-row { display: table; width: 100% }
+.gt-cell-row .gt-cell { display: table-cell }
+.gt-cell-row .gt-cell-top { vertical-align: top }
+.gt-cell-row .gt-cell-middle { vertical-align: middle }
+.gt-cell-row .gt-cell-bottom { vertical-align: bottom }
+
+/* align */
+.align-baseline { vertical-align: baseline !important }
+.align-top { vertical-align: top !important }
+.align-middle { vertical-align: middle !important }
+.align-bottom { vertical-align: bottom !important }
+
+.docu-info .simple-list {float: left;font-size:8pt;width: 100%;}
+
+/* 왼쪽 */
+.docu-info.left {width:35%}
+
+.docu-info .simple-list dt {float: left;clear:both;width:45%;padding-bottom: 0.32cm;font-weight: bold;color: #121212;}
+.docu-info .simple-list dd {float: left;width:55%;padding-bottom:0.32cm;color: #121212;}
+/* 오른쪽 */
+.docu-info.right {width:65%}
+.docu-info.right .simple-list dt {width:20%}
+.docu-info.right .simple-list dt .tit {margin-left: 30px}
+.docu-info.right .simple-list dd {width:80%; line-height: 1.6}
+.docu-info.right .simple-list span {
+  word-break: normal;
+  word-wrap: break-word;
+  display: inline-block;
+}
+.docu-info.right .simple-list .date {
+  color: #666;
+}
+.docu-info.right .reference span {
+  margin-right: 5px;
+  display: inline;
+}
+
+/* 수신 */
+.docu-info .reception {
+  margin-top: 5px;
+}
+.docu-info .reception .tit {
+  padding-bottom: 0.32cm;
+  font-size: 8pt;
+  font-weight: bold;
+  color: #121212;
+}
+.docu-info .reception .name {
+  font-size: 8pt;
+  padding-bottom: 0.32cm;
+  color: #121212;
+}
+.docu-info .reception .name span {
+  margin-right: 5px;
+}
+
+/* multi-office-name */
+.tag-container {
+    overflow: hidden;
+    display: inline-flex !important;
+}
+
+.tag-container.block {
+    display: flex !important;
+    max-width: 100%;
+    justify-content: center;
+}
+
+.tag-content {
+    min-width: 0;
+    font-size: 10px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    border-radius: 4px;
+    padding: 0 4px;
+    background-color: #eff4fc;
+    line-height: 1.6;
+}
+
+@media print  {
+	html, body {background: #fff;color: #000;font-size: 8pt;margin: 0;padding: 0mm 0mm 0mm 0.2mm;}
+	.no-print {display:none;}
+	a img{border:none;}
+	.print-wrap  {box-sizing: border-box;width: 100%;margin: 0;padding:0;}
+}
+

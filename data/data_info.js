@@ -1,0 +1,1 @@
+BACKUP_INFO = {"name":"\uc804\uccb4","complete_date":"0000-00-00 00:00:00","file_name":"hiworks_backup_20251112092000","office_url":"http:\/\/approval.office.hiworks.com\/sghitech.co.kr\/","backup_type":"A","start_date":"2021-07-01","end_date":"2025-04-16","register_name":"\uae40\uc885\ud604"}
