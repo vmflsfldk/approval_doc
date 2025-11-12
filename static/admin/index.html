@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>관리자 페이지</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/admin/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>승인 문서 관리자</h1>
+      <button id="logoutButton" type="button" class="hidden">로그아웃</button>
+    </header>
+
+    <main>
+      <section id="loginSection">
+        <h2>관리자 로그인</h2>
+        <form id="loginForm">
+          <label>
+            아이디
+            <input type="text" name="username" required />
+          </label>
+          <label>
+            비밀번호
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit">로그인</button>
+          <p id="loginError" class="error" role="alert"></p>
+        </form>
+      </section>
+
+      <section id="managementSection" class="hidden">
+        <article>
+          <h2>사용자 추가</h2>
+          <form id="createUserForm">
+            <label>
+              아이디
+              <input type="text" name="username" required />
+            </label>
+            <label>
+              임시 비밀번호
+              <input type="password" name="password" required />
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="isAdmin" /> 관리자 권한 부여
+            </label>
+            <button type="submit">사용자 생성</button>
+            <p id="createUserMessage" class="message" role="status"></p>
+          </form>
+        </article>
+
+        <article>
+          <h2>비밀번호 변경</h2>
+          <form id="updatePasswordForm">
+            <label>
+              대상 아이디
+              <input type="text" name="username" required />
+            </label>
+            <label>
+              새 비밀번호
+              <input type="password" name="password" required />
+            </label>
+            <button type="submit">비밀번호 변경</button>
+            <p id="updatePasswordMessage" class="message" role="status"></p>
+          </form>
+        </article>
+
+        <article>
+          <h2>사용자 목록</h2>
+          <button type="button" id="refreshUsers">새로고침</button>
+          <table id="userTable">
+            <thead>
+              <tr>
+                <th>아이디</th>
+                <th>관리자 여부</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <p id="userListMessage" class="message" role="status"></p>
+        </article>
+      </section>
+    </main>
+
+    <template id="userRowTemplate">
+      <tr>
+        <td class="username"></td>
+        <td class="is-admin"></td>
+      </tr>
+    </template>
+
+    <script src="/static/admin/script.js" type="module"></script>
+  </body>
+</html>
