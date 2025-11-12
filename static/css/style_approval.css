@@ -758,15 +758,14 @@ select.select-type {line-height:28px;height:28px;border-color:#cfcfcf}
 .data-search .search input[type="text"] {float: left;width: 160px;border: 0;margin: 1px 1px 1px 9px;padding: 4px 4px 4px 0;color: #999;vertical-align: top;line-height: 19px;height: 19px;outline: none;color: #000;}
 .data-search .btn_search {float: right;margin: 8px 8px 0 0;}
 
-.search-area .document-filters {display: flex;flex-wrap: wrap;align-items: center;gap: 8px;margin-top: 20px;padding: 8px 12px;border: 1px solid #c0c5ca;border-radius: 20px;background: #fff;}
+.search-area .document-filters {display: flex;flex-direction: column;align-items: stretch;gap: 8px;margin-top: 20px;padding: 8px 12px;border: 1px solid #c0c5ca;border-radius: 20px;background: #fff;}
 .search-area .document-filters input[type="text"],
-.search-area .document-filters input[type="date"] {height: 32px;padding: 0 10px;border: 1px solid #c0c5ca;border-radius: 6px;font-size: 14px;color: #000;}
-.search-area .document-filters input[type="text"] {min-width: 160px;}
-.search-area .document-filters input[type="date"] {min-width: 150px;}
-.search-area .document-filters .filter-group {display: flex;align-items: center;gap: 6px;flex-wrap: nowrap;}
+.search-area .document-filters input[type="date"] {height: 32px;padding: 0 10px;border: 1px solid #c0c5ca;border-radius: 6px;font-size: 14px;color: #000;width: 100%;min-width: 0;box-sizing: border-box;}
+.search-area .document-filters .filter-group {display: flex;align-items: center;gap: 6px;flex-wrap: nowrap;width: 100%;}
+.search-area .document-filters .filter-group input[type="date"] {flex: 1 1 auto;min-width: 0;}
 .search-area .document-filters .filter-separator {color: #666;font-weight: bold;}
-.search-area .document-filters .btn_search {float: none;margin: 0;display: inline-flex;align-items: center;justify-content: center;width: 34px;height: 34px;border: 1px solid #2985db;border-radius: 50%;background: #2985db;color: #fff;cursor: pointer;}
-.search-area .document-filters .btn_reset {height: 34px;padding: 0 14px;border: 1px solid #c0c5ca;border-radius: 17px;background: #f7f7f7;color: #333;cursor: pointer;}
+.search-area .document-filters .btn_search {float: none;margin: 0;display: inline-flex;align-items: center;justify-content: center;width: 100%;height: 34px;border: 1px solid #2985db;border-radius: 6px;background: #2985db;color: #fff;cursor: pointer;}
+.search-area .document-filters .btn_reset {height: 34px;padding: 0 14px;border: 1px solid #c0c5ca;border-radius: 6px;background: #f7f7f7;color: #333;cursor: pointer;width: 100%;}
 .search-area .document-filters button:focus,
 .search-area .document-filters input:focus {outline: 2px solid #2985db;outline-offset: 1px;}
 .icon_excel_down {display: inline-block;margin-top: 3px;width: 26px;height: 26px;background: url(/static/images/insa/spr_insa_icon.png) -9px 1px no-repeat;}
