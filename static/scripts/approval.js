@@ -9,30 +9,49 @@ approvalClass = function()
         this.SEARCH_END_DATE = '';
         this.PER_PAGE = 10;
         this.PAGE = 1;
-	this.TOTAL_CNT = 0;
-	this.LAST_PAGE = 0;
-	this.DATA = [];
-	this.ALL_DOCUMENTS = [];
-	this.BACKUP_INFO = null;
-	this.DOCUMENT_DATA;
-	this.print = '';
+        this.TOTAL_CNT = 0;
+        this.LAST_PAGE = 0;
+        this.DATA = [];
+        this.BACKUP_INFO = null;
+        this.DOCUMENT_DATA;
+        this.print = '';
+        this.REQUEST_THROTTLE_MS = 400;
+        this._lastFetchAt = 0;
+        this._pendingFetchTimer = null;
+        this._pendingFetchParams = null;
+        this._isFetching = false;
+        this._fetchQueued = false;
+        this._activeFetchController = null;
+        this._isLoading = false;
 }
 
 approvalClass.prototype = {
-	setData : function(documents, info)
-	{
-                _this.ALL_DOCUMENTS = _.isArray(documents) ? documents : [];
+        setData : function(documents, info, pagination)
+        {
+                var initialPagination = pagination || {};
                 _this.BACKUP_INFO = info || null;
                 _this.SEARCH_WORD = '';
                 _this.SEARCH_DRAFTER = '';
                 _this.SEARCH_START_DATE = '';
                 _this.SEARCH_END_DATE = '';
-                _this.PAGE = 1;
-                _this.TOTAL_CNT = 0;
-		_this.DATA = [];
-		_this.LAST_PAGE = 0;
-		_this.DOCUMENT_DATA = null;
-	},
+                _this.PER_PAGE = initialPagination.perPage || _this.PER_PAGE || 10;
+                _this.PAGE = initialPagination.page || 1;
+                _this.TOTAL_CNT = initialPagination.total || (_.isArray(documents) ? documents.length : 0);
+                _this.DATA = _.isArray(documents) ? documents : [];
+                _this.LAST_PAGE = Math.ceil(_this.TOTAL_CNT / _this.PER_PAGE);
+                _this.DOCUMENT_DATA = null;
+                _this._lastFetchAt = 0;
+                if(_this._pendingFetchTimer){
+                        clearTimeout(_this._pendingFetchTimer);
+                }
+                _this._pendingFetchTimer = null;
+                _this._pendingFetchParams = null;
+                _this._fetchQueued = false;
+                if(_this._activeFetchController && typeof _this._activeFetchController.abort === 'function'){
+                        _this._activeFetchController.abort();
+                }
+                _this._activeFetchController = null;
+        },
 
 	init : function()
 	{
@@ -72,89 +91,8 @@ approvalClass.prototype = {
                         $endDate.val(_this.SEARCH_END_DATE);
                 }
 
-                _this.getData();
                 _this.loadPage();
                 _this.renderSearchConditions();
-        },
-
-        getData : function()
-        {
-                var documents = _.isArray(_this.ALL_DOCUMENTS) ? _this.ALL_DOCUMENTS : [];
-                var filtered = documents;
-
-                if(_this.SEARCH_WORD !== ''){
-                        var keyword = _this.SEARCH_WORD.toLowerCase();
-                        filtered = _.filter(filtered, function(data){
-                                if(_.isEmpty(data)){
-                                        return false;
-                                }
-
-                                var documentCode = (data.document_code || '').toLowerCase();
-                                var title = (data.title || '').toLowerCase();
-                                var userName = (data.user_name || '').toLowerCase();
-                                var nodeName = (data.node_name || '').toLowerCase();
-
-                                return documentCode.indexOf(keyword) !== -1 || title.indexOf(keyword) !== -1
-                                        || userName.indexOf(keyword) !== -1 || nodeName.indexOf(keyword) !== -1;
-                        });
-                }
-
-                if(_this.SEARCH_DRAFTER !== ''){
-                        var drafterKeyword = _this.SEARCH_DRAFTER.toLowerCase();
-                        filtered = _.filter(filtered, function(data){
-                                if(_.isEmpty(data)){
-                                        return false;
-                                }
-
-                                var userName = (data.user_name || '').toLowerCase();
-                                return userName.indexOf(drafterKeyword) !== -1;
-                        });
-                }
-
-                if(_this.SEARCH_START_DATE !== ''){
-                        var startDate = _this.SEARCH_START_DATE;
-                        filtered = _.filter(filtered, function(data){
-                                if(_.isEmpty(data)){
-                                        return false;
-                                }
-
-                                var regDate = (data.regdate || '').substring(0, 10);
-
-                                if(regDate === ''){
-                                        return false;
-                                }
-
-                                return regDate >= startDate;
-                        });
-                }
-
-                if(_this.SEARCH_END_DATE !== ''){
-                        var endDate = _this.SEARCH_END_DATE;
-                        filtered = _.filter(filtered, function(data){
-                                if(_.isEmpty(data)){
-                                        return false;
-                                }
-
-                                var regDate = (data.regdate || '').substring(0, 10);
-
-                                if(regDate === ''){
-                                        return false;
-                                }
-
-                                return regDate <= endDate;
-                        });
-                }
-
-                _this.TOTAL_CNT = _.size(filtered);
-                _this.LAST_PAGE = Math.ceil(_this.TOTAL_CNT / _this.PER_PAGE);
-
-                if(_this.TOTAL_CNT === 0){
-                        _this.PAGE = 1;
-                }else if(_this.PAGE > _this.LAST_PAGE){
-                        _this.PAGE = _this.LAST_PAGE;
-                }
-
-                _this.DATA = _this.pageLimit(filtered);
         },
 
         loadPage : function()
@@ -202,28 +140,148 @@ approvalClass.prototype = {
                 $j('#backup_title').text(summary);
         },
 
-        pageLimit : function(obj)
+        buildQueryParams : function()
         {
-                var results = [];
+                return {
+                        page: _this.PAGE,
+                        perPage: _this.PER_PAGE,
+                        searchWord: _this.SEARCH_WORD,
+                        searchDrafter: _this.SEARCH_DRAFTER,
+                        startDate: _this.SEARCH_START_DATE,
+                        endDate: _this.SEARCH_END_DATE
+                };
+        },
 
-		if(obj == null) return results;
+        showLoadingState : function(isLoading)
+        {
+                _this._isLoading = isLoading;
 
-		var min = _this.PER_PAGE * (_this.PAGE-1);
-		var max = _this.PER_PAGE * _this.PAGE;
+                if(isLoading){
+                        $j('#backup_list_table tbody').html('<tr align="center"><td>불러오는 중...</td></tr>');
+                        $j('.paginate').hide();
+                }
+        },
 
-		for(var i=min; i<max; i++) {
-			if(_.isEmpty(obj[i])) {
-				break;
-			} else {
-				results.push(obj[i]);
-			}
-		}
+        fetchDocuments : function(params)
+        {
+                var query = new URLSearchParams();
+                _.each(params, function(value, key){
+                        if(value === undefined || value === null){
+                                return;
+                        }
 
-		return results;
-	},
-	
-	pageNavi : function()
-	{
+                        query.append(key, value);
+                });
+
+                if(_this._activeFetchController && typeof _this._activeFetchController.abort === 'function'){
+                        _this._activeFetchController.abort();
+                }
+
+                var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+
+                if(controller){
+                        _this._activeFetchController = controller;
+                }else{
+                        _this._activeFetchController = null;
+                }
+
+                var queryString = query.toString();
+                var url = '/api/documents' + (queryString !== '' ? ('?' + queryString) : '');
+
+                return fetch(url, {
+                        credentials: 'include',
+                        signal: controller ? controller.signal : undefined
+                }).then(function(response){
+                        if(response.ok){
+                                return response.json();
+                        }
+
+                        return response.json().catch(function(){ return {}; }).then(function(errorBody){
+                                var message = (errorBody && errorBody.error) ? errorBody.error : '목록을 불러올 수 없습니다.';
+                                var err = new Error(message);
+                                err.status = response.status;
+                                throw err;
+                        });
+                }).finally(function(){
+                        if(_this._activeFetchController === controller){
+                                _this._activeFetchController = null;
+                        }
+                });
+        },
+
+        schedulePageLoad : function()
+        {
+                var params = _this.buildQueryParams();
+                _this._pendingFetchParams = params;
+
+                if(_this._pendingFetchTimer){
+                        clearTimeout(_this._pendingFetchTimer);
+                        _this._pendingFetchTimer = null;
+                }
+
+                if(_this._isFetching){
+                        _this._fetchQueued = true;
+                        return;
+                }
+
+                var now = Date.now();
+                var elapsed = now - _this._lastFetchAt;
+                var delay = (elapsed >= _this.REQUEST_THROTTLE_MS) ? 0 : (_this.REQUEST_THROTTLE_MS - elapsed);
+
+                _this._pendingFetchTimer = setTimeout(function(){
+                        _this._pendingFetchTimer = null;
+                        _this.executePageFetch(_this._pendingFetchParams);
+                }, delay);
+        },
+
+        executePageFetch : function(params)
+        {
+                if(!params){
+                        return;
+                }
+
+                _this._isFetching = true;
+                _this._lastFetchAt = Date.now();
+                _this.showLoadingState(true);
+
+                _this.fetchDocuments(params)
+                        .then(function(payload){
+                                var pagination = payload.pagination || {};
+
+                                if(payload.info){
+                                        _this.BACKUP_INFO = payload.info;
+                                }
+
+                                _this.PER_PAGE = pagination.perPage || _this.PER_PAGE;
+                                _this.PAGE = pagination.page || _this.PAGE;
+                                _this.TOTAL_CNT = pagination.total || 0;
+                                _this.DATA = _.isArray(payload.documents) ? payload.documents : [];
+                                _this.LAST_PAGE = Math.ceil(_this.TOTAL_CNT / _this.PER_PAGE);
+
+                                _this.loadPage();
+                                _this.renderSearchConditions();
+                        })
+                        .catch(function(error){
+                                if(error && error.name === 'AbortError'){
+                                        return;
+                                }
+
+                                console.error(error);
+                                alert(error && error.message ? error.message : '목록을 불러오는 중 오류가 발생했습니다.');
+                        })
+                        .finally(function(){
+                                _this._isFetching = false;
+                                _this.showLoadingState(false);
+
+                                if(_this._fetchQueued){
+                                        _this._fetchQueued = false;
+                                        _this.schedulePageLoad();
+                                }
+                        });
+        },
+
+        pageNavi : function()
+        {
 		var paging_size = 5;
 		var first_page = 1;
 		var last_page = Math.ceil(_this.TOTAL_CNT / _this.PER_PAGE);
@@ -268,9 +326,26 @@ approvalClass.prototype = {
 	
         setPage : function(page)
         {
-                _this.PAGE = page;
-                _this.getData();
-                _this.loadPage();
+                var nextPage = parseInt(page, 10);
+
+                if(isNaN(nextPage) || nextPage <= 0){
+                        nextPage = 1;
+                }
+
+                if(_this.LAST_PAGE > 0 && nextPage > _this.LAST_PAGE){
+                        nextPage = _this.LAST_PAGE;
+                }
+
+                if(nextPage <= 0){
+                        nextPage = 1;
+                }
+
+                if(nextPage === _this.PAGE && !_this._isFetching){
+                        return;
+                }
+
+                _this.PAGE = nextPage;
+                _this.schedulePageLoad();
         },
 
         validateDateRange : function(startDate, endDate)
@@ -299,9 +374,8 @@ approvalClass.prototype = {
                 _this.SEARCH_DRAFTER = searchDrafter;
                 _this.SEARCH_START_DATE = startDate;
                 _this.SEARCH_END_DATE = endDate;
-                _this.getData();
-                _this.loadPage();
                 _this.renderSearchConditions();
+                _this.schedulePageLoad();
         },
 	
 	getDocument : function(document_no)
