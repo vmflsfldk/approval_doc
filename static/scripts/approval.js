@@ -8,41 +8,62 @@ approvalClass = function()
 	this.PAGE = 1;
 	this.TOTAL_CNT = 0;
 	this.LAST_PAGE = 0;
-	this.DATA = '';
+	this.DATA = [];
+	this.ALL_DOCUMENTS = [];
+	this.BACKUP_INFO = null;
 	this.DOCUMENT_DATA;
 	this.print = '';
 }
 
 approvalClass.prototype = {
+	setData : function(documents, info)
+	{
+		_this.ALL_DOCUMENTS = _.isArray(documents) ? documents : [];
+		_this.BACKUP_INFO = info || null;
+		_this.SEARCH_WORD = '';
+		_this.PAGE = 1;
+		_this.TOTAL_CNT = 0;
+		_this.DATA = [];
+		_this.LAST_PAGE = 0;
+		_this.DOCUMENT_DATA = null;
+	},
+
 	init : function()
 	{
-		$j('#backup_type').html(BACKUP_INFO.name);
-		$j('#backup_date').html(BACKUP_INFO.start_date + ' ~ ' + BACKUP_INFO.end_date);
-		$j('#backup_register_name').html(BACKUP_INFO.register_name);
-		$j('#backup_title').closest('p').append(BACKUP_INFO.file_name);
+		if(!_this.BACKUP_INFO){
+			if(typeof console !== 'undefined' && console.error){
+				console.error('Approval data has not been initialised.');
+			}
+			return;
+		}
+
+		$j('#backup_type').html(_this.BACKUP_INFO.name);
+		$j('#backup_date').html(_this.BACKUP_INFO.start_date + ' ~ ' + _this.BACKUP_INFO.end_date);
+		$j('#backup_register_name').html(_this.BACKUP_INFO.register_name);
+		$j('#backup_title').closest('p').append(_this.BACKUP_INFO.file_name);
 		_this.getData();
 		_this.loadPage();
 	},
-	
+
 	getData : function()
 	{
 		if(_this.SEARCH_WORD == ''){
-			_this.DATA = _this.pageLimit(HIWORKS_DATA);
-			_this.TOTAL_CNT = _.size(HIWORKS_DATA);			
+			_this.DATA = _this.pageLimit(_this.ALL_DOCUMENTS);
+			_this.TOTAL_CNT = _.size(_this.ALL_DOCUMENTS);
 		}else{
-			_this.DATA = _.filter(HIWORKS_DATA, function(data){
-				return data.document_code.indexOf(_this.SEARCH_WORD) !== -1 || data.title.indexOf(_this.SEARCH_WORD) !== -1 
+			_this.DATA = _.filter(_this.ALL_DOCUMENTS, function(data){
+				return data.document_code.indexOf(_this.SEARCH_WORD) !== -1 || data.title.indexOf(_this.SEARCH_WORD) !== -1
 					|| data.user_name.indexOf(_this.SEARCH_WORD) !== -1 || data.node_name.indexOf(_this.SEARCH_WORD) !== -1;
 			});
-			
+
 			_this.TOTAL_CNT = _.size(_this.DATA);
-			
+
 			if(_.size(_this.DATA) > _this.PER_PAGE){
 				_this.DATA = _this.pageLimit(_this.DATA);
 			}
 		}
 	},
-	
+
 	loadPage : function()
 	{
 		$j('#backup_list_table tbody').empty();
