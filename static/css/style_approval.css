@@ -128,7 +128,11 @@ body, html {height: 100%;}
 /* approval document view */
 .rotate-90{transform:rotate(90deg);}
 .slash{background:url('../images/slash.png');background-size:100% 100%;}
-.cont_box.view, .cont_box.write {min-width: 500px;max-width: 1013px;}
+.cont_box.view, .cont_box.write {
+    min-width: 500px;
+    width: 100%;
+    max-width: 1200px;
+}
 .approval-wrap.view h1 {padding-bottom:20px;font-size:32px;font-weight:normal;color:#333;text-align:center;letter-spacing:-1px;}
 .approval-wrap.view .tableType02 {margin-bottom: 0;border-left: 1px solid #cdcdcd;border-right: 1px solid #cdcdcd;}
 .approval-wrap.view .tableType02 tr:last-child th,
@@ -152,7 +156,14 @@ body, html {height: 100%;}
 .docu-common-wrap {padding:0 0 25px 0;}
 .docu-common-wrap h1, .docu-common-wrap h2, .docu-common-wrap h3, .docu-common-wrap h4, .docu-common-wrap h5, .docu-common-wrap h6, .docu-common-wrap pre {margin-top: 0;margin-bottom: 0}
 .docu-common-wrap h2 {position:relative;padding:50px 25px 15px;font-weight:normal;font-size:22px;color: #333;}
-.docu-common-wrap .contents {padding:0 25px 50px;max-width: 930px;font-size:16px;line-height:1.8;border-bottom:1px solid #ececec;color: #000;}
+.docu-common-wrap .contents {
+    padding:0 25px 50px;
+    max-width: 1150px;
+    font-size:16px;
+    line-height:1.8;
+    border-bottom:1px solid #ececec;
+    color: #000;
+}
 
 /* 스타일 리셋 원복 */
 .docu-common-wrap .contents dl,
