@@ -43,19 +43,22 @@ app.get('/api/session', (req, res) => {
   res.json({
     authenticated: Boolean(req.session.userId),
     userId: req.session.userId || null,
+    role: req.session.userRole || null,
+    name: req.session.displayName || null,
   });
 });
 
 app.post('/api/login', async (req, res) => {
   const { id, password } = req.body;
+  const normalizedId = typeof id === 'string' ? id.trim() : '';
 
-  if (!id || !password) {
+  if (!normalizedId || !password) {
     return res.status(400).json({ error: '아이디와 비밀번호를 모두 입력해주세요.' });
   }
 
   try {
     const db = getPool();
-    const [rows] = await db.query('SELECT username, password_hash FROM users WHERE username = ?', [id]);
+    const [rows] = await db.query('SELECT username, password_hash, role, name FROM users WHERE username = ?', [normalizedId]);
 
     if (rows.length === 0) {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
@@ -69,6 +72,8 @@ app.post('/api/login', async (req, res) => {
     }
 
     req.session.userId = storedUser.username;
+    req.session.userRole = storedUser.role === 'admin' ? 'admin' : 'user';
+    req.session.displayName = storedUser.name ? storedUser.name.trim() : '';
     res.json({ success: true });
   } catch (error) {
     console.error('Login error:', error);
@@ -123,7 +128,20 @@ app.get('/api/documents', (req, res) => {
 
   try {
     const { documents, info } = loadDocuments();
-    res.json({ documents, info });
+    const isAdmin = req.session.userRole === 'admin';
+    const userName = req.session.displayName;
+
+    const filteredDocuments = isAdmin
+      ? documents
+      : documents.filter((doc) => {
+          if (!doc || !doc.user_name || !userName) {
+            return false;
+          }
+
+          return doc.user_name.trim() === userName.trim();
+        });
+
+    res.json({ documents: filteredDocuments, info });
   } catch (error) {
     console.error('Document load error:', error);
     res.status(500).json({ error: '문서를 불러오는 중 오류가 발생했습니다.' });

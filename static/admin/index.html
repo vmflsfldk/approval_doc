@@ -38,11 +38,19 @@
               <input type="text" name="username" required />
             </label>
             <label>
+              이름
+              <input type="text" name="name" required />
+            </label>
+            <label>
               임시 비밀번호
               <input type="password" name="password" required />
             </label>
-            <label class="checkbox">
-              <input type="checkbox" name="isAdmin" /> 관리자 권한 부여
+            <label>
+              역할
+              <select name="role" required>
+                <option value="user" selected>일반 사용자</option>
+                <option value="admin">관리자</option>
+              </select>
             </label>
             <button type="submit">사용자 생성</button>
             <p id="createUserMessage" class="message" role="status"></p>
@@ -72,7 +80,8 @@
             <thead>
               <tr>
                 <th>아이디</th>
-                <th>관리자 여부</th>
+                <th>이름</th>
+                <th>역할</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -85,7 +94,8 @@
     <template id="userRowTemplate">
       <tr>
         <td class="username"></td>
-        <td class="is-admin"></td>
+        <td class="display-name"></td>
+        <td class="role"></td>
       </tr>
     </template>
 
