@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전자결재 백업 로그인</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background: #f4f5f9;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #2f3542;
+        }
+
+        .login-wrapper {
+            max-width: 420px;
+            margin: 80px auto;
+            padding: 48px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 12px 24px rgba(47, 53, 66, 0.08);
+        }
+
+        .login-wrapper h1 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .login-wrapper p {
+            font-size: 14px;
+            color: #57606f;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .login-group {
+            margin-bottom: 20px;
+        }
+
+        .login-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .login-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe4ea;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .login-group input:focus {
+            outline: none;
+            border-color: #4078c0;
+            box-shadow: 0 0 0 2px rgba(64, 120, 192, 0.15);
+        }
+
+        .login-error {
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 4px;
+            background: #ffe3e3;
+            color: #d63031;
+            font-size: 13px;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            background: #4078c0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .login-button[disabled] {
+            background: #a4b0be;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <main class="login-wrapper">
+        <h1>전자결재 백업 로그인</h1>
+        <p>사내 계정 정보를 입력하여 전자결재 백업 문서를 확인하세요.</p>
+        <div id="loginError" class="login-error" role="alert" aria-live="assertive" hidden></div>
+        <form id="loginForm">
+            <div class="login-group">
+                <label for="loginId">아이디</label>
+                <input type="text" id="loginId" name="id" autocomplete="username" required>
+            </div>
+            <div class="login-group">
+                <label for="loginPassword">비밀번호</label>
+                <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="login-button" id="loginSubmit">로그인</button>
+        </form>
+    </main>
+    <script src="/static/scripts/login.js"></script>
+</body>
+</html>
