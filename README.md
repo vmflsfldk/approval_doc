@@ -29,6 +29,8 @@ This project renders archived Hiworks approval documents behind a small Express 
 
    You can place these values in a `.env` file during development. The server always connects to the `approvaldb` schema.
 
+   A `.env.example` file is provided with common local defaults; copy it to `.env` and update `SESSION_SECRET` to a strong, unique value before running the server.
+
 3. Start the server:
 
    ```bash
