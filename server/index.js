@@ -3,37 +3,13 @@ require('dotenv').config();
 const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
-const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { getPool } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_NAME = 'approvaldb';
-
-let pool;
-function getPool() {
-  if (!pool) {
-    const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD } = process.env;
-    if (!DB_HOST || !DB_USER || !DB_PASSWORD) {
-      throw new Error('Database credentials are not fully configured.');
-    }
-
-    pool = mysql.createPool({
-      host: DB_HOST,
-      port: DB_PORT ? Number(DB_PORT) : 3306,
-      user: DB_USER,
-      password: DB_PASSWORD,
-      database: DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
-  }
-
-  return pool;
-}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
