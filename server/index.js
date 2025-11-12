@@ -96,6 +96,17 @@ app.post('/api/logout', (req, res) => {
 const DATA_DIR = path.join(__dirname, '..', 'data');
 let cachedDocuments = null;
 
+function discoverDataChunks() {
+  const entries = fs.readdirSync(DATA_DIR);
+  return entries
+    .filter((file) => /^data\d+\.js$/.test(file) && file !== 'data_info.js')
+    .sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)[0], 10);
+      const numB = parseInt(b.match(/\d+/)[0], 10);
+      return numA - numB;
+    });
+}
+
 function readDataset(filename, exportName) {
   const filePath = path.join(DATA_DIR, filename);
   const scriptContent = fs.readFileSync(filePath, 'utf-8');
@@ -112,8 +123,24 @@ function readDataset(filename, exportName) {
 
 function loadDocuments() {
   if (!cachedDocuments) {
+    const chunkFiles = discoverDataChunks();
+    const documents = [];
+
+    chunkFiles.forEach((file) => {
+      try {
+        const chunk = readDataset(file, 'HIWORKS_DATA');
+        if (!Array.isArray(chunk)) {
+          throw new Error('Chunk did not export an array');
+        }
+        documents.push(...chunk);
+      } catch (error) {
+        console.error(`Failed to load data chunk ${file}:`, error);
+        throw error;
+      }
+    });
+
     cachedDocuments = {
-      documents: readDataset('data.js', 'HIWORKS_DATA'),
+      documents,
       info: readDataset('data_info.js', 'BACKUP_INFO'),
     };
   }
