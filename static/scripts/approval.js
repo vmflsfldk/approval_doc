@@ -156,9 +156,15 @@ approvalClass.prototype = {
         {
                 _this._isLoading = isLoading;
 
+                var $listContainer = $j('.backup-list');
+                var $loader = $j('#document_list_loader');
+
                 if(isLoading){
-                        $j('#backup_list_table tbody').html('<tr align="center"><td>불러오는 중...</td></tr>');
-                        $j('.paginate').hide();
+                        $listContainer.addClass('is-loading').attr('aria-busy', 'true');
+                        $loader.attr('aria-hidden', 'false');
+                }else{
+                        $listContainer.removeClass('is-loading').attr('aria-busy', 'false');
+                        $loader.attr('aria-hidden', 'true');
                 }
         },
 
