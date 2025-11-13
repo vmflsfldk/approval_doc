@@ -84,6 +84,110 @@
             background: #a4b0be;
             cursor: default;
         }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(47, 53, 66, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 1000;
+        }
+
+        .modal-backdrop[hidden] {
+            display: none;
+        }
+
+        .modal-dialog {
+            width: 100%;
+            max-width: 420px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(47, 53, 66, 0.16);
+            padding: 32px;
+        }
+
+        .modal-dialog h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .modal-dialog p {
+            font-size: 14px;
+            color: #57606f;
+            margin-bottom: 20px;
+        }
+
+        .modal-group {
+            margin-bottom: 18px;
+        }
+
+        .modal-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .modal-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe4ea;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal-group input:focus {
+            outline: none;
+            border-color: #4078c0;
+            box-shadow: 0 0 0 2px rgba(64, 120, 192, 0.15);
+        }
+
+        .modal-error {
+            margin-bottom: 18px;
+            padding: 12px;
+            border-radius: 4px;
+            background: #ffe3e3;
+            color: #d63031;
+            font-size: 13px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-button {
+            min-width: 120px;
+            padding: 12px 18px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-button.primary {
+            background: #4078c0;
+            color: #ffffff;
+        }
+
+        .modal-button.secondary {
+            background: #f1f2f6;
+            color: #2f3542;
+        }
+
+        .modal-button[disabled] {
+            background: #a4b0be;
+            cursor: default;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -103,6 +207,27 @@
             <button type="submit" class="login-button" id="loginSubmit">로그인</button>
         </form>
     </main>
+    <div id="passwordChangeModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="passwordChangeTitle" hidden>
+        <div class="modal-dialog">
+            <h2 id="passwordChangeTitle">새 비밀번호 설정</h2>
+            <p id="passwordChangeDescription">보안을 위해 비밀번호 변경이 필요합니다. 새 비밀번호를 입력한 뒤 확인 버튼을 눌러주세요.</p>
+            <div id="passwordChangeError" class="modal-error" role="alert" aria-live="assertive" hidden></div>
+            <form id="passwordChangeForm" aria-describedby="passwordChangeDescription">
+                <div class="modal-group">
+                    <label for="newPassword">새 비밀번호</label>
+                    <input type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password" required>
+                </div>
+                <div class="modal-group">
+                    <label for="confirmNewPassword">새 비밀번호 확인</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" minlength="8" autocomplete="new-password" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-button secondary" id="passwordChangeCancel">취소</button>
+                    <button type="submit" class="modal-button primary" id="passwordChangeSubmit">비밀번호 변경</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script src="/static/scripts/login.js"></script>
 </body>
 </html>
