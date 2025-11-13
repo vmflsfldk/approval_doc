@@ -30,6 +30,9 @@ app.use(
 const STATIC_DIR = path.join(__dirname, '..', 'static');
 app.use('/static', express.static(STATIC_DIR));
 
+const DATA_DIR = path.join(__dirname, '..', 'data');
+app.use('/data', express.static(DATA_DIR));
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'backup-index.html'));
 });
