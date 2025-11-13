@@ -9,6 +9,7 @@ const { getBackupInfo, queryDocuments } = require('./dataAccess');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const INITIAL_PASSWORD_HASH = process.env.INITIAL_PASSWORD_HASH || '';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -60,7 +61,10 @@ app.post('/api/login', async (req, res) => {
 
   try {
     const db = getPool();
-    const [rows] = await db.query('SELECT username, password_hash, role, name FROM users WHERE username = ?', [normalizedId]);
+    const [rows] = await db.query(
+      'SELECT username, password_hash, role, name, must_change_password FROM users WHERE username = ?',
+      [normalizedId]
+    );
 
     if (rows.length === 0) {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
@@ -73,6 +77,13 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
 
+    const requiresPasswordChange = Boolean(Number(storedUser.must_change_password)) ||
+      (INITIAL_PASSWORD_HASH && storedUser.password_hash === INITIAL_PASSWORD_HASH);
+
+    if (requiresPasswordChange) {
+      return res.json({ requirePasswordChange: true, userId: storedUser.username });
+    }
+
     req.session.userId = storedUser.username;
     req.session.userRole = storedUser.role === 'admin' ? 'admin' : 'user';
     req.session.displayName = storedUser.name ? storedUser.name.trim() : '';
@@ -80,6 +91,63 @@ app.post('/api/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: '로그인 처리 중 오류가 발생했습니다.' });
+  }
+});
+
+app.post('/api/password/change', async (req, res) => {
+  const { id, currentPassword, newPassword } = req.body;
+  const normalizedId = typeof id === 'string' ? id.trim() : '';
+  const currentPasswordValue = typeof currentPassword === 'string' ? currentPassword : '';
+  const newPasswordValue = typeof newPassword === 'string' ? newPassword : '';
+
+  if (!normalizedId || !currentPasswordValue || !newPasswordValue) {
+    return res.status(400).json({ error: '아이디, 현재 비밀번호, 새 비밀번호를 모두 입력해주세요.' });
+  }
+
+  try {
+    const db = getPool();
+    const [rows] = await db.query(
+      'SELECT username, password_hash, role, name, must_change_password FROM users WHERE username = ?',
+      [normalizedId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    const storedUser = rows[0];
+    const hashedCurrent = crypto.createHash('sha512').update(currentPasswordValue).digest('base64');
+
+    if (storedUser.password_hash !== hashedCurrent) {
+      return res.status(401).json({ error: '현재 비밀번호가 올바르지 않습니다.' });
+    }
+
+    const requiresPasswordChange = Boolean(Number(storedUser.must_change_password)) ||
+      (INITIAL_PASSWORD_HASH && storedUser.password_hash === INITIAL_PASSWORD_HASH);
+
+    if (!requiresPasswordChange) {
+      return res.status(400).json({ error: '이미 비밀번호가 변경되었습니다.' });
+    }
+
+    if (currentPasswordValue === newPasswordValue) {
+      return res.status(400).json({ error: '새 비밀번호는 현재 비밀번호와 달라야 합니다.' });
+    }
+
+    const hashedNew = crypto.createHash('sha512').update(newPasswordValue).digest('base64');
+
+    await db.query(
+      'UPDATE users SET password_hash = ?, must_change_password = 0 WHERE username = ?',
+      [hashedNew, storedUser.username]
+    );
+
+    req.session.userId = storedUser.username;
+    req.session.userRole = storedUser.role === 'admin' ? 'admin' : 'user';
+    req.session.displayName = storedUser.name ? storedUser.name.trim() : '';
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ error: '비밀번호 변경 중 오류가 발생했습니다.' });
   }
 });
 
