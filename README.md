@@ -10,6 +10,7 @@ This project renders archived Hiworks approval documents behind a small Express 
   * `password_hash` (base64-encoded SHA-512 string)
   * `role` (enum of `admin` or `user`)
   * `name` (full name of the employee)
+  * `must_change_password` (boolean/TINYINT flag that forces a password change on next login)
 * The archived document payloads located in the repository `data/` directory
 
 ## Installation
@@ -29,7 +30,8 @@ This project renders archived Hiworks approval documents behind a small Express 
    | `DB_USER` | MariaDB username with access to `approvaldb` |
    | `DB_PASSWORD` | Password for `DB_USER` |
    | `SESSION_SECRET` | Secret string for signing Express sessions |
-   | `PORT` | Port for the Express server (optional, defaults to `3000`) |
+  | `PORT` | Port for the Express server (optional, defaults to `3000`) |
+  | `INITIAL_PASSWORD_HASH` | (Optional) Base64 SHA-512 hash that represents your default bootstrap password. Users matching this hash will be forced to change their password even if the flag is unset. |
 
    You can place these values in a `.env` file during development. The server always connects to the `approvaldb` schema.
 
@@ -50,6 +52,12 @@ This project renders archived Hiworks approval documents behind a small Express 
    Log in at `http://localhost:3001/` with an administrator account to add users, reset passwords, or review existing accounts. The admin server shares the same `.env` configuration and session secret as the viewer app.
 
 5. Open `http://localhost:PORT/` to view the approval archive. Authenticated requests will load document metadata from disk after verifying the active session. Navigate to `http://localhost:PORT/login.html` to authenticate, and use `/api/logout` to clear a session if needed.
+
+### Handling initial passwords
+
+* Administrator-created accounts (or those reset from the admin interface) are stored with `must_change_password = 1`. When such a user authenticates through `/api/login`, the server returns `{ requirePasswordChange: true, userId }` instead of establishing a session.
+* Clients should then call `POST /api/password/change` with `{ id, currentPassword, newPassword }`. A successful change updates the stored hash, clears the `must_change_password` flag, and creates a normal session.
+* If you provide `INITIAL_PASSWORD_HASH`, any account that still matches the bootstrap password will be treated as an initial password even if `must_change_password` was not populated.
 
 ## Creating an administrator account
 

@@ -135,12 +135,16 @@ adminApp.post('/api/users', requireAdmin, async (req, res) => {
 
   try {
     const db = getPool();
-    await db.query('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)', [
-      trimmedUsername,
-      hashedPassword,
-      normalizedRole,
-      trimmedName,
-    ]);
+    await db.query(
+      'INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, ?)',
+      [
+        trimmedUsername,
+        hashedPassword,
+        normalizedRole,
+        trimmedName,
+        1,
+      ]
+    );
 
     res.status(201).json({ success: true });
   } catch (error) {
@@ -165,7 +169,7 @@ adminApp.put('/api/users/:username/password', requireAdmin, async (req, res) => 
 
   try {
     const db = getPool();
-    const [result] = await db.query('UPDATE users SET password_hash = ? WHERE username = ?', [
+    const [result] = await db.query('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE username = ?', [
       hashedPassword,
       username,
     ]);
