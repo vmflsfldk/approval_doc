@@ -9,10 +9,18 @@ const INFO_EXPORT_NAME = 'BACKUP_INFO';
 const DATA_FILE_PATTERN = /^data\d+\.js$/;
 const MAX_PER_PAGE = 100;
 
-const cachedChunks = new Map();
-
 let cachedInfo = null;
 let cachedChunkList = null;
+
+const datasetCache = new Map();
+
+function shouldCacheDataset(filename, explicitPreference) {
+  if (typeof explicitPreference === 'boolean') {
+    return explicitPreference;
+  }
+
+  return !DATA_FILE_PATTERN.test(filename);
+}
 
 function discoverDataChunks() {
   if (!cachedChunkList) {
@@ -30,9 +38,11 @@ function discoverDataChunks() {
   return cachedChunkList;
 }
 
-function readDataset(filename, exportName) {
-  if (cachedChunks.has(filename)) {
-    return cachedChunks.get(filename);
+function readDataset(filename, exportName, options = {}) {
+  const cache = shouldCacheDataset(filename, options.cache);
+
+  if (cache && datasetCache.has(filename)) {
+    return datasetCache.get(filename);
   }
 
   const filePath = path.join(DATA_DIR, filename);
@@ -46,13 +56,17 @@ function readDataset(filename, exportName) {
   }
 
   const dataset = context[exportName];
-  cachedChunks.set(filename, dataset);
+
+  if (cache) {
+    datasetCache.set(filename, dataset);
+  }
+
   return dataset;
 }
 
 function getBackupInfo() {
   if (!cachedInfo) {
-    cachedInfo = readDataset(INFO_FILE, INFO_EXPORT_NAME);
+    cachedInfo = readDataset(INFO_FILE, INFO_EXPORT_NAME, { cache: true });
   }
   return cachedInfo;
 }
@@ -161,8 +175,8 @@ function collectDocuments(offset, perPage, filters, userContext) {
   const documents = [];
   let totalMatches = 0;
 
-  chunkFiles.forEach((file) => {
-    const chunk = readDataset(file, DATA_EXPORT_NAME);
+  for (const file of chunkFiles) {
+    let chunk = readDataset(file, DATA_EXPORT_NAME, { cache: false });
     if (!Array.isArray(chunk)) {
       throw new Error(`Chunk ${file} did not export an array`);
     }
@@ -179,7 +193,8 @@ function collectDocuments(offset, perPage, filters, userContext) {
 
       totalMatches += 1;
     }
-  });
+    chunk = null;
+  }
 
   return { documents, totalMatches };
 }
@@ -228,7 +243,7 @@ function queryDocuments({
 }
 
 function clearDatasetCache() {
-  cachedChunks.clear();
+  datasetCache.clear();
   cachedInfo = null;
   cachedChunkList = null;
 }
