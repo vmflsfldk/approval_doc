@@ -9,6 +9,8 @@ const INFO_EXPORT_NAME = 'BACKUP_INFO';
 const DATA_FILE_PATTERN = /^data\d+\.js$/;
 const MAX_PER_PAGE = 100;
 
+const cachedChunks = new Map();
+
 let cachedInfo = null;
 let cachedChunkList = null;
 
@@ -29,6 +31,10 @@ function discoverDataChunks() {
 }
 
 function readDataset(filename, exportName) {
+  if (cachedChunks.has(filename)) {
+    return cachedChunks.get(filename);
+  }
+
   const filePath = path.join(DATA_DIR, filename);
   const scriptContent = fs.readFileSync(filePath, 'utf-8');
   const context = {};
@@ -39,7 +45,9 @@ function readDataset(filename, exportName) {
     throw new Error(`Expected ${exportName} to be defined in ${filename}`);
   }
 
-  return context[exportName];
+  const dataset = context[exportName];
+  cachedChunks.set(filename, dataset);
+  return dataset;
 }
 
 function getBackupInfo() {
@@ -219,7 +227,14 @@ function queryDocuments({
   };
 }
 
+function clearDatasetCache() {
+  cachedChunks.clear();
+  cachedInfo = null;
+  cachedChunkList = null;
+}
+
 module.exports = {
   getBackupInfo,
   queryDocuments,
+  clearDatasetCache,
 };
