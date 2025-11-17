@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
 const archiver = require('archiver');
 const puppeteer = require('puppeteer');
 const { getPool } = require('./db');
@@ -46,38 +47,263 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
-function buildDocumentHtml(doc) {
-  const title = escapeHtml(doc.title || doc.document_code || doc.no || '문서');
-  const documentCode = escapeHtml(doc.document_code || doc.no || '-');
-  const drafter = escapeHtml(doc.user_name || '-');
-  const regDate = escapeHtml(doc.regdate || '-');
-  const content = doc.content || '';
+const PRINT_TEMPLATE_PATH = path.join(__dirname, '..', 'static', 'scripts', 'template.js');
+let cachedPrintTemplate = null;
 
-  return `<!doctype html>
-  <html lang="ko">
-    <head>
-      <meta charset="utf-8" />
-      <base href="${BASE_URL}">
-      <title>${title}</title>
-      <style>
-        body { font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; color: #222; margin: 32px; }
-        h1 { font-size: 20px; margin-bottom: 16px; }
-        .meta { margin-bottom: 16px; padding: 12px; background: #f7f7f7; border: 1px solid #e5e5e5; }
-        .meta-item { margin-bottom: 6px; }
-        .content { margin-top: 12px; }
-        .content h2 { font-size: 16px; }
-      </style>
-    </head>
-    <body>
-      <h1>${title}</h1>
-      <div class="meta">
-        <div class="meta-item"><strong>문서 번호:</strong> ${documentCode}</div>
-        <div class="meta-item"><strong>기안자:</strong> ${drafter}</div>
-        <div class="meta-item"><strong>기안 일시:</strong> ${regDate}</div>
-      </div>
-      <div class="content">${content}</div>
-    </body>
-  </html>`;
+function loadPrintTemplate() {
+  if (cachedPrintTemplate) {
+    return cachedPrintTemplate;
+  }
+
+  const templateFile = fs.readFileSync(PRINT_TEMPLATE_PATH, 'utf-8');
+  const match = templateFile.match(/var PRINT_PAGE='(.*?)';/s);
+
+  if (!match || match.length < 2) {
+    throw new Error('PRINT_PAGE template could not be loaded');
+  }
+
+  cachedPrintTemplate = match[1];
+  return cachedPrintTemplate;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizePath(value) {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+
+  return value.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function applyPrintTemplate(data) {
+  const template = loadPrintTemplate();
+  const printMode = data.print_mode === 'content' ? 'content' : 'document';
+  let html = template;
+
+  html = html.replace(
+    /{{if print_mode === "content"}}([\s\S]*?){{else}}([\s\S]*?){{\/if}}/,
+    (_, contentView, documentView) => (printMode === 'content' ? contentView : documentView)
+  );
+
+  const htmlReplacements = {
+    content: data.content || '',
+    'print_info.print_basic': data.print_info?.print_basic || '',
+    'print_info.print_simple': data.print_info?.print_simple || '',
+  };
+
+  Object.entries(htmlReplacements).forEach(([key, value]) => {
+    const pattern = new RegExp(`{{html ${escapeRegExp(key)}}}`, 'g');
+    html = html.replace(pattern, value);
+  });
+
+  const textReplacements = {
+    form_title: escapeHtml(data.form_title || ''),
+    title: escapeHtml(data.title || ''),
+    'print_info.second_line_view_flag': escapeHtml(data.print_info?.second_line_view_flag || ''),
+    'print_info.third_line_view_flag': escapeHtml(data.print_info?.third_line_view_flag || ''),
+    'print_info.fourth_line_view_flag': escapeHtml(data.print_info?.fourth_line_view_flag || ''),
+    'print_info.loc_line_type_f': escapeHtml(data.print_info?.loc_line_type_f || ''),
+  };
+
+  Object.entries(textReplacements).forEach(([key, value]) => {
+    const pattern = new RegExp(`\\$\\{${escapeRegExp(key)}\\}`, 'g');
+    html = html.replace(pattern, value);
+  });
+
+  const baseTag = `<base href="${BASE_URL}">`;
+  html = html.replace('<head>', `<head>${baseTag}`);
+
+  return html;
+}
+
+function buildBindingScript(doc) {
+  const normalizeList = (list) => (Array.isArray(list) ? list : []);
+  const attachments = normalizeList(doc.attached_file_list).map((file) => ({
+    file_size: file.file_size || '',
+    ext: normalizePath(file.ext || ''),
+    org_file_name: file.org_file_name || '',
+    download_url: normalizePath(file.download_url || ''),
+  }));
+
+  const comments = normalizeList(doc.comments).map((item) => ({
+    type: item.type || '',
+    profile_url: normalizePath(item.profile_url || ''),
+    user_name: item.user_name || '',
+    title: item.title || '',
+    comment: item.comment || '',
+    regdate: item.regdate || '',
+  }));
+
+  const commentsHistory = normalizeList(doc.comments_history).map((item) => ({
+    type: item.type || '',
+    profile_url: normalizePath(item.profile_url || ''),
+    user_name: item.user_name || '',
+    title: item.title || '',
+    comment: item.comment || '',
+    regdate: item.regdate || '',
+  }));
+
+  const serialized = JSON.stringify({ attachments, comments, commentsHistory });
+
+  return `<script>
+    (function() {
+      const data = ${serialized};
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function normalizePath(value) {
+        if (!value || typeof value !== 'string') {
+          return '';
+        }
+
+        return value.replace(/\\\\/g, '/').replace(/^\\.\\//, '');
+      }
+
+      function formatMultiline(text) {
+        return escapeHtml(text).replace(/\n/g, '<br />');
+      }
+
+      function createAttachmentSpan(file) {
+        const span = document.createElement('span');
+        const iconSrc = normalizePath(file.ext);
+        if (iconSrc) {
+          const img = document.createElement('img');
+          img.src = iconSrc;
+          img.alt = '';
+          img.className = 'attached';
+          span.appendChild(img);
+        }
+
+        const link = document.createElement('a');
+        link.href = normalizePath(file.download_url);
+        link.textContent = file.org_file_name || '';
+        link.target = '_blank';
+        span.appendChild(link);
+
+        if (file.file_size) {
+          span.appendChild(document.createTextNode(` (${file.file_size})`));
+        }
+
+        return span;
+      }
+
+      function renderAttachments() {
+        const container = document.getElementById('print_attached_files');
+        if (!container || !data.attachments.length) {
+          return;
+        }
+
+        const table = container.querySelector('table');
+        table.innerHTML = '<caption>별첨 테이블</caption>';
+        const tbody = document.createElement('tbody');
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+
+        data.attachments.forEach((file) => {
+          cell.appendChild(createAttachmentSpan(file));
+        });
+
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        table.appendChild(tbody);
+        container.style.display = 'block';
+      }
+
+      function renderComments(targetId, items) {
+        const container = document.getElementById(targetId);
+        if (!container || !items.length) {
+          return;
+        }
+
+        const tbody = container.querySelector('tbody');
+
+        items.forEach((item) => {
+          const tr = document.createElement('tr');
+          const userTd = document.createElement('td');
+          const profile = normalizePath(item.profile_url);
+
+          if (profile) {
+            const img = document.createElement('img');
+            img.src = profile;
+            img.alt = '';
+            img.style.width = '24px';
+            img.style.height = '24px';
+            img.style.marginRight = '8px';
+            userTd.appendChild(img);
+          }
+
+          const name = document.createElement('div');
+          name.textContent = item.user_name || '';
+          userTd.appendChild(name);
+
+          const date = document.createElement('div');
+          date.className = 'date';
+          date.textContent = item.regdate || '';
+          userTd.appendChild(date);
+
+          const dividerTd = document.createElement('td');
+          dividerTd.textContent = '';
+
+          const commentTd = document.createElement('td');
+          if (item.title) {
+            const titleEl = document.createElement('div');
+            titleEl.innerHTML = formatMultiline(item.title);
+            commentTd.appendChild(titleEl);
+          }
+
+          const body = document.createElement('div');
+          body.innerHTML = formatMultiline(item.comment);
+          commentTd.appendChild(body);
+
+          tr.appendChild(userTd);
+          tr.appendChild(dividerTd);
+          tr.appendChild(commentTd);
+          tbody.appendChild(tr);
+        });
+
+        container.style.display = 'block';
+      }
+
+      function ensureBaseTag() {
+        if (!document.querySelector('base')) {
+          const base = document.createElement('base');
+          base.href = '${BASE_URL}';
+          document.head.prepend(base);
+        }
+      }
+
+      function init() {
+        ensureBaseTag();
+        renderAttachments();
+        renderComments('print_comments', data.comments);
+        renderComments('print_comments_history', data.commentsHistory);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+  <script src="static/scripts/print.js"></script>`;
+}
+
+function buildDocumentHtml(doc) {
+  const templateHtml = applyPrintTemplate(doc);
+  const bindingScript = buildBindingScript(doc);
+
+  return templateHtml.replace('</body></html>', `${bindingScript}</body></html>`);
 }
 
 async function renderPdfBuffers(documents) {
