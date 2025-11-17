@@ -248,8 +248,50 @@ function clearDatasetCache() {
   cachedChunkList = null;
 }
 
+function getDocumentsByNumbers(documentIds = [], userContext = { isAdmin: false, userName: '' }) {
+  const normalizedIds = Array.isArray(documentIds)
+    ? documentIds.map((id) => normaliseString(String(id))).filter(Boolean)
+    : [];
+
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  const targetSet = new Set(normalizedIds);
+  const results = [];
+  const chunkFiles = discoverDataChunks();
+
+  for (const file of chunkFiles) {
+    const chunk = readDataset(file, DATA_EXPORT_NAME, { cache: false });
+    if (!Array.isArray(chunk)) {
+      continue;
+    }
+
+    for (let i = 0; i < chunk.length; i += 1) {
+      const doc = chunk[i];
+      const docId = normaliseString(doc && doc.no);
+      if (!targetSet.has(docId)) {
+        continue;
+      }
+
+      if (!matchesUser(doc, userContext)) {
+        continue;
+      }
+
+      results.push(doc);
+
+      if (results.length === targetSet.size) {
+        return results;
+      }
+    }
+  }
+
+  return results;
+}
+
 module.exports = {
   getBackupInfo,
   queryDocuments,
   clearDatasetCache,
+  getDocumentsByNumbers,
 };

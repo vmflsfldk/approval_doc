@@ -190,7 +190,72 @@
         }
         
         .selected_document {
-        	background-color: #f9f9f9;
+                background-color: #f9f9f9;
+        }
+
+        .document-select {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+
+        .document-select-checkbox {
+            width: 18px;
+            height: 18px;
+        }
+
+        .bulk-selected {
+            background-color: #f2f7ff;
+        }
+
+        .content_title .detail_select button {
+            border: 1px solid #d1d1d1;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .content_title .detail_select .primary {
+            background: #2b66f6;
+            color: #fff;
+            border-color: #2b66f6;
+        }
+
+        .content_title .detail_select button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .detail_status {
+            margin-left: 12px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        #toast_message {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 16px;
+            background: rgba(51, 51, 51, 0.9);
+            color: #fff;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+            z-index: 1000;
+        }
+
+        #toast_message.is-error {
+            background: rgba(204, 51, 51, 0.95);
+        }
+
+        #toast_message.show {
+            display: block;
         }
     </style>
 </head>
@@ -274,6 +339,13 @@
                             <span class="detail_select">
                                 <a href="javascript:void(0);" class="hide" id="btn_print_only_content" onclick="Approval.documentPrint('PRINT_CONTENT');">본문인쇄</a>
                             </span>
+                            <span class="detail_select">
+                                <button type="button" id="toggle_select_all" aria-pressed="false">전체 선택</button>
+                            </span>
+                            <span class="detail_select">
+                                <button type="button" id="bulk_download_pdf" class="primary">PDF 일괄 저장</button>
+                            </span>
+                            <span class="detail_status" id="bulk_download_status" aria-live="polite"></span>
                         </fieldset>
                     </form>
                 </div>
@@ -318,6 +390,7 @@
                 </div>
             </section>
         </div>
+        <div id="toast_message" role="status" aria-live="polite"></div>
     </div>
     <div id="print_document"></div>
 </body>

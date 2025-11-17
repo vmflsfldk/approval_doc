@@ -15,6 +15,7 @@ approvalClass = function()
         this.BACKUP_INFO = null;
         this.DOCUMENT_DATA;
         this.print = '';
+        this.selectedDocumentIds = new Set();
         this.REQUEST_THROTTLE_MS = 400;
         this._lastFetchAt = 0;
         this._pendingFetchTimer = null;
@@ -23,6 +24,7 @@ approvalClass = function()
         this._fetchQueued = false;
         this._activeFetchController = null;
         this._isLoading = false;
+        this._toastTimer = null;
 }
 
 approvalClass.prototype = {
@@ -100,21 +102,203 @@ approvalClass.prototype = {
                 $j('#backup_list_table tbody').empty();
 
                 if(_.isEmpty(_this.DATA)){
-			alert('데이터가 없습니다.');
-			$j('#backup_list_table tbody').html('<tr align="center"><td>데이터가 없습니다.</td></tr>');
-			$j('.paginate').hide();
-			return;
-		}else{
-			$j.template('left_list', LEFT_LIST);
-			$j.tmpl('left_list', _this.DATA).appendTo('#backup_list_table tbody');
-			
-			$j('#document_form_title').html(_this.DATA[0].form_title);
-			
-			_this.getDocument(_this.DATA[0].no);
-			$j('.paginate').show();
-		}
+                        alert('데이터가 없습니다.');
+                        $j('#backup_list_table tbody').html('<tr align="center"><td>데이터가 없습니다.</td></tr>');
+                        $j('.paginate').hide();
+                        return;
+                }else{
+                        $j.template('left_list', LEFT_LIST);
+                        $j.tmpl('left_list', _this.DATA).appendTo('#backup_list_table tbody');
+
+                        _this.applySelectionState();
+
+                        $j('#document_form_title').html(_this.DATA[0].form_title);
+
+                        _this.getDocument(_this.DATA[0].no);
+                        $j('.paginate').show();
+                }
 
                 _this.pageNavi();
+                _this.updateSelectAllState();
+                _this.updateSelectionStatus();
+        },
+
+        applySelectionState : function()
+        {
+                $j('#backup_list_table tbody .document-select-checkbox').each(function(){
+                        var documentNo = String($j(this).data('document-no'));
+                        var isSelected = _this.selectedDocumentIds.has(documentNo);
+                        $j(this).prop('checked', isSelected);
+                        _this.toggleRowSelectionClass(documentNo, isSelected);
+                });
+        },
+
+        toggleRowSelectionClass : function(documentNo, isSelected)
+        {
+                var rowId = '#left_document_list_' + documentNo;
+                if(isSelected){
+                        $j(rowId).addClass('bulk-selected');
+                }else{
+                        $j(rowId).removeClass('bulk-selected');
+                }
+        },
+
+        updateSelectionStatus : function()
+        {
+                var totalSelected = _this.selectedDocumentIds.size;
+                var statusText = totalSelected > 0 ? (totalSelected + '건 선택됨') : '';
+                $j('#bulk_download_status').text(statusText);
+        },
+
+        updateSelectAllState : function()
+        {
+                var $toggle = $j('#toggle_select_all');
+                if(!$toggle.length){
+                        return;
+                }
+
+                var isAllSelected = _this.areAllCurrentDocumentsSelected();
+                $toggle.attr('aria-pressed', isAllSelected ? 'true' : 'false');
+                $toggle.text(isAllSelected ? '전체 해제' : '전체 선택');
+        },
+
+        areAllCurrentDocumentsSelected : function()
+        {
+                if(!_this.DATA || _this.DATA.length === 0){
+                        return false;
+                }
+
+                for(var i=0; i<_this.DATA.length; i++){
+                        var documentNo = String(_this.DATA[i].no);
+                        if(!_this.selectedDocumentIds.has(documentNo)){
+                                return false;
+                        }
+                }
+
+                return true;
+        },
+
+        clearSelection : function()
+        {
+                _this.selectedDocumentIds.clear();
+                _this.applySelectionState();
+                _this.updateSelectAllState();
+                _this.updateSelectionStatus();
+        },
+
+        setDocumentSelected : function(documentNo, isSelected)
+        {
+                var docId = String(documentNo);
+                if(isSelected){
+                        _this.selectedDocumentIds.add(docId);
+                }else{
+                        _this.selectedDocumentIds.delete(docId);
+                }
+
+                _this.toggleRowSelectionClass(docId, isSelected);
+                _this.updateSelectAllState();
+                _this.updateSelectionStatus();
+        },
+
+        toggleSelectAllForPage : function()
+        {
+                if(!_this.DATA || _this.DATA.length === 0){
+                        return;
+                }
+
+                var selectAll = !_this.areAllCurrentDocumentsSelected();
+
+                for(var i=0; i<_this.DATA.length; i++){
+                        _this.setDocumentSelected(_this.DATA[i].no, selectAll);
+                }
+        },
+
+        updateStatusMessage : function(message)
+        {
+                $j('#bulk_download_status').text(message || '');
+        },
+
+        showToast : function(message, isError)
+        {
+                var $toast = $j('#toast_message');
+                if($toast.length === 0){
+                        return;
+                }
+
+                $toast.text(message || '');
+                if(isError){
+                        $toast.addClass('is-error');
+                }else{
+                        $toast.removeClass('is-error');
+                }
+                $toast.addClass('show');
+
+                if(_this._toastTimer){
+                        clearTimeout(_this._toastTimer);
+                }
+
+                _this._toastTimer = setTimeout(function(){
+                        $toast.removeClass('show');
+                }, 3200);
+        },
+
+        bulkDownloadPdf : function()
+        {
+                var selectedIds = Array.from(_this.selectedDocumentIds);
+                if(selectedIds.length === 0){
+                        _this.showToast('선택된 문서가 없습니다.', true);
+                        return;
+                }
+
+                _this.updateStatusMessage('0/' + selectedIds.length + '건 PDF 생성 중...');
+
+                fetch('/api/documents/pdf', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                                'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ documentIds: selectedIds })
+                }).then(function(response){
+                        if(!response.ok){
+                                return response.json().catch(function(){ return {}; }).then(function(errorBody){
+                                        var message = errorBody && errorBody.error ? errorBody.error : 'PDF 생성 중 오류가 발생했습니다.';
+                                        throw new Error(message);
+                                });
+                        }
+
+                        return Promise.all([response.blob(), Promise.resolve(response.headers.get('content-disposition'))]);
+                }).then(function(results){
+                        var blob = results[0];
+                        var contentDisposition = results[1] || '';
+                        var filename = 'documents.zip';
+
+                        var singleFile = selectedIds.length === 1;
+                        if(singleFile){
+                                filename = 'document_' + selectedIds[0] + '.pdf';
+                        }
+
+                        var match = contentDisposition.match(/filename="?([^";]+)"?/i);
+                        if(match && match[1]){
+                                filename = match[1];
+                        }
+
+                        var url = window.URL.createObjectURL(blob);
+                        var link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        window.URL.revokeObjectURL(url);
+
+                        _this.updateStatusMessage(selectedIds.length + '/' + selectedIds.length + '건 저장 완료');
+                        _this.showToast('PDF 저장을 완료했습니다.');
+                }).catch(function(error){
+                        console.error(error);
+                        _this.updateStatusMessage('PDF 생성에 실패했습니다.');
+                        _this.showToast(error && error.message ? error.message : 'PDF 생성에 실패했습니다.', true);
+                });
         },
 
         renderSearchConditions : function()
@@ -380,6 +564,7 @@ approvalClass.prototype = {
                 _this.SEARCH_DRAFTER = searchDrafter;
                 _this.SEARCH_START_DATE = startDate;
                 _this.SEARCH_END_DATE = endDate;
+                _this.clearSelection();
                 _this.renderSearchConditions();
                 _this.schedulePageLoad();
         },
@@ -621,6 +806,25 @@ var Approval = new approvalClass();
 
 $j(document).ready(function(){
         Approval.init();
+
+        $j(document).on('click', '.document-select', function(e){
+                e.stopPropagation();
+        });
+
+        $j(document).on('change', '.document-select-checkbox', function(e){
+                e.stopPropagation();
+                var documentNo = $j(this).data('document-no');
+                var isChecked = $j(this).is(':checked');
+                Approval.setDocumentSelected(documentNo, isChecked);
+        });
+
+        $j(document).on('click', '#toggle_select_all', function(){
+                Approval.toggleSelectAllForPage();
+        });
+
+        $j(document).on('click', '#bulk_download_pdf', function(){
+                Approval.bulkDownloadPdf();
+        });
 
         $j(document).on('submit', '#documentFilterForm', function(e){
                 e.preventDefault();
