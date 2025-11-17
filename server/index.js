@@ -8,7 +8,12 @@ const fs = require('fs');
 const archiver = require('archiver');
 const puppeteer = require('puppeteer');
 const { getPool } = require('./db');
-const { getBackupInfo, queryDocuments, getDocumentsByNumbers } = require('./dataAccess');
+const {
+  getBackupInfo,
+  queryDocuments,
+  getDocumentsByNumbers,
+  getDocumentNumbersByFilters,
+} = require('./dataAccess');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,6 +81,19 @@ function normalizePath(value) {
   }
 
   return value.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function normalizeFilterValue(value) {
+  return typeof value === 'string' ? value : '';
+}
+
+function extractFilters(source = {}) {
+  return {
+    searchWord: normalizeFilterValue(source.searchWord),
+    searchDrafter: normalizeFilterValue(source.searchDrafter),
+    startDate: normalizeFilterValue(source.startDate),
+    endDate: normalizeFilterValue(source.endDate),
+  };
 }
 
 function applyPrintTemplate(data) {
@@ -481,22 +499,14 @@ app.get('/api/documents', (req, res) => {
     const userName = req.session.displayName;
     const page = parseInt(req.query.page, 10) || 1;
     const perPage = parseInt(req.query.perPage, 10) || 10;
-    const searchWord = typeof req.query.searchWord === 'string' ? req.query.searchWord : '';
-    const searchDrafter = typeof req.query.searchDrafter === 'string' ? req.query.searchDrafter : '';
-    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : '';
-    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : '';
+    const filters = extractFilters(req.query);
 
     const { documents, total, page: normalizedPage, perPage: normalizedPerPage } = queryDocuments({
       page,
       perPage,
       isAdmin,
       userName,
-      filters: {
-        searchWord,
-        searchDrafter,
-        startDate,
-        endDate,
-      },
+      filters,
     });
 
     const info = getBackupInfo();
@@ -516,6 +526,28 @@ app.get('/api/documents', (req, res) => {
   }
 });
 
+app.get('/api/documents/ids', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: '인증이 필요합니다.' });
+  }
+
+  try {
+    const isAdmin = req.session.userRole === 'admin';
+    const userName = req.session.displayName;
+    const filters = extractFilters(req.query);
+
+    const documentIds = getDocumentNumbersByFilters(filters, { isAdmin, userName });
+
+    res.json({
+      documentIds,
+      total: documentIds.length,
+    });
+  } catch (error) {
+    console.error('Document ID load error:', error);
+    res.status(500).json({ error: '문서 번호를 불러오는 중 오류가 발생했습니다.' });
+  }
+});
+
 app.post('/api/documents/pdf', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: '인증이 필요합니다.' });
@@ -525,13 +557,19 @@ app.post('/api/documents/pdf', async (req, res) => {
     ? req.body.documentIds.map((id) => (typeof id === 'string' || typeof id === 'number' ? String(id) : '')).filter(Boolean)
     : [];
 
-  if (documentIds.length === 0) {
+  const filterPayload = extractFilters(req.body && req.body.filters ? req.body.filters : {});
+  const useFilters = Boolean(req.body && req.body.useFilters);
+
+  if (!useFilters && documentIds.length === 0) {
     return res.status(400).json({ error: '다운로드할 문서를 선택해주세요.' });
   }
 
   try {
     const userContext = { isAdmin: req.session.userRole === 'admin', userName: req.session.displayName };
-    const documents = getDocumentsByNumbers(documentIds, userContext);
+    const targetDocumentIds = useFilters
+      ? getDocumentNumbersByFilters(filterPayload, userContext)
+      : documentIds;
+    const documents = getDocumentsByNumbers(targetDocumentIds, userContext);
 
     if (!documents || documents.length === 0) {
       return res.status(404).json({ error: '요청한 문서를 찾을 수 없습니다.' });

@@ -14,6 +14,15 @@ let cachedChunkList = null;
 
 const datasetCache = new Map();
 
+function buildFilterBag(filters = {}) {
+  return {
+    searchWord: normaliseString(filters.searchWord).toLowerCase(),
+    searchDrafter: normaliseString(filters.searchDrafter).toLowerCase(),
+    startDate: normaliseString(filters.startDate),
+    endDate: normaliseString(filters.endDate),
+  };
+}
+
 function shouldCacheDataset(filename, explicitPreference) {
   if (typeof explicitPreference === 'boolean') {
     return explicitPreference;
@@ -210,12 +219,7 @@ function queryDocuments({
   const safePage = normalisePage(page);
   const offset = (safePage - 1) * safePerPage;
 
-  const filterBag = {
-    searchWord: normaliseString(filters.searchWord).toLowerCase(),
-    searchDrafter: normaliseString(filters.searchDrafter).toLowerCase(),
-    startDate: normaliseString(filters.startDate),
-    endDate: normaliseString(filters.endDate),
-  };
+  const filterBag = buildFilterBag(filters);
 
   const userContext = { isAdmin: Boolean(isAdmin), userName };
 
@@ -289,9 +293,38 @@ function getDocumentsByNumbers(documentIds = [], userContext = { isAdmin: false,
   return results;
 }
 
+function getDocumentNumbersByFilters(filters = {}, userContext = { isAdmin: false, userName: '' }) {
+  const filterBag = buildFilterBag(filters);
+  const normalizedUserContext = { isAdmin: Boolean(userContext.isAdmin), userName: userContext.userName };
+  const chunkFiles = discoverDataChunks();
+  const documentNumbers = [];
+
+  for (const file of chunkFiles) {
+    const chunk = readDataset(file, DATA_EXPORT_NAME, { cache: false });
+    if (!Array.isArray(chunk)) {
+      continue;
+    }
+
+    for (let i = 0; i < chunk.length; i += 1) {
+      const doc = chunk[i];
+      if (!passesFilters(doc, filterBag, normalizedUserContext)) {
+        continue;
+      }
+
+      const documentNo = normaliseString(doc && doc.no);
+      if (documentNo) {
+        documentNumbers.push(documentNo);
+      }
+    }
+  }
+
+  return documentNumbers;
+}
+
 module.exports = {
   getBackupInfo,
   queryDocuments,
   clearDatasetCache,
   getDocumentsByNumbers,
+  getDocumentNumbersByFilters,
 };

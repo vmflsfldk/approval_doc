@@ -16,6 +16,10 @@ approvalClass = function()
         this.DOCUMENT_DATA;
         this.print = '';
         this.selectedDocumentIds = new Set();
+        this.isAllResultsSelected = false;
+        this.allResultDocumentIds = [];
+        this._selectionSnapshot = null;
+        this._isFetchingAllIds = false;
         this.REQUEST_THROTTLE_MS = 400;
         this._lastFetchAt = 0;
         this._pendingFetchTimer = null;
@@ -53,6 +57,10 @@ approvalClass.prototype = {
                         _this._activeFetchController.abort();
                 }
                 _this._activeFetchController = null;
+                _this.isAllResultsSelected = false;
+                _this.allResultDocumentIds = [];
+                _this._selectionSnapshot = null;
+                _this._isFetchingAllIds = false;
         },
 
 	init : function()
@@ -105,6 +113,9 @@ approvalClass.prototype = {
                         alert('데이터가 없습니다.');
                         $j('#backup_list_table tbody').html('<tr align="center"><td>데이터가 없습니다.</td></tr>');
                         $j('.paginate').hide();
+                        _this.updateSelectAllState();
+                        _this.updateAllSelectionToggleUI();
+                        _this.updateSelectionStatus();
                         return;
                 }else{
                         $j.template('left_list', LEFT_LIST);
@@ -120,6 +131,7 @@ approvalClass.prototype = {
 
                 _this.pageNavi();
                 _this.updateSelectAllState();
+                _this.updateAllSelectionToggleUI();
                 _this.updateSelectionStatus();
         },
 
@@ -145,15 +157,42 @@ approvalClass.prototype = {
 
         updateSelectionStatus : function()
         {
-                var totalSelected = _this.selectedDocumentIds.size;
-                var statusText = totalSelected > 0 ? (totalSelected + '건 선택됨') : '';
+                var totalSelected = _this.isAllResultsSelected ? _this.allResultDocumentIds.length : _this.selectedDocumentIds.size;
+                var statusText = '';
+
+                if(_this.isAllResultsSelected){
+                        statusText = totalSelected > 0 ? ('검색 결과 전체 ' + totalSelected + '건 선택됨') : '';
+                }else if(totalSelected > 0){
+                        statusText = totalSelected + '건 선택됨';
+                }
+
                 $j('#bulk_download_status').text(statusText);
+        },
+
+        updateAllSelectionToggleUI : function()
+        {
+                var $toggle = $j('#toggle_select_all_results');
+                if(!$toggle.length){
+                        return;
+                }
+
+                var isActive = _this.isAllResultsSelected;
+                $toggle.attr('aria-pressed', isActive ? 'true' : 'false');
+                $toggle.text(isActive ? '검색 결과 전체 선택 해제' : '검색 결과 전체 선택');
         },
 
         updateSelectAllState : function()
         {
                 var $toggle = $j('#toggle_select_all');
                 if(!$toggle.length){
+                        return;
+                }
+
+                $toggle.prop('disabled', _this.isAllResultsSelected);
+
+                if(_this.isAllResultsSelected){
+                        $toggle.attr('aria-pressed', 'false');
+                        $toggle.text('페이지 전체 선택');
                         return;
                 }
 
@@ -181,13 +220,24 @@ approvalClass.prototype = {
         clearSelection : function()
         {
                 _this.selectedDocumentIds.clear();
+                _this.isAllResultsSelected = false;
+                _this.allResultDocumentIds = [];
+                _this._selectionSnapshot = null;
                 _this.applySelectionState();
                 _this.updateSelectAllState();
+                _this.updateAllSelectionToggleUI();
                 _this.updateSelectionStatus();
         },
 
         setDocumentSelected : function(documentNo, isSelected)
         {
+                if(_this.isAllResultsSelected){
+                        _this.isAllResultsSelected = false;
+                        _this.allResultDocumentIds = [];
+                        _this._selectionSnapshot = null;
+                        _this.updateAllSelectionToggleUI();
+                }
+
                 var docId = String(documentNo);
                 if(isSelected){
                         _this.selectedDocumentIds.add(docId);
@@ -203,6 +253,11 @@ approvalClass.prototype = {
         toggleSelectAllForPage : function()
         {
                 if(!_this.DATA || _this.DATA.length === 0){
+                        return;
+                }
+
+                if(_this.isAllResultsSelected){
+                        _this.showToast('검색 결과 전체 선택을 해제한 후 사용하세요.', true);
                         return;
                 }
 
@@ -245,12 +300,16 @@ approvalClass.prototype = {
         bulkDownloadPdf : function()
         {
                 var selectedIds = Array.from(_this.selectedDocumentIds);
-                if(selectedIds.length === 0){
+                var totalTargetCount = _this.isAllResultsSelected ? _this.allResultDocumentIds.length : selectedIds.length;
+
+                if(totalTargetCount === 0){
                         _this.showToast('선택된 문서가 없습니다.', true);
                         return;
                 }
 
-                _this.updateStatusMessage('0/' + selectedIds.length + '건 PDF 생성 중...');
+                var payload = _this.isAllResultsSelected ? { useFilters: true, filters: _this.buildFilterParams(), documentIds: _this.allResultDocumentIds } : { documentIds: selectedIds };
+
+                _this.updateStatusMessage('0/' + totalTargetCount + '건 PDF 생성 중...');
 
                 fetch('/api/documents/pdf', {
                         method: 'POST',
@@ -258,7 +317,7 @@ approvalClass.prototype = {
                         headers: {
                                 'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ documentIds: selectedIds })
+                        body: JSON.stringify(payload)
                 }).then(function(response){
                         if(!response.ok){
                                 return response.json().catch(function(){ return {}; }).then(function(errorBody){
@@ -273,9 +332,10 @@ approvalClass.prototype = {
                         var contentDisposition = results[1] || '';
                         var filename = 'documents.zip';
 
-                        var singleFile = selectedIds.length === 1;
+                        var singleFile = totalTargetCount === 1;
                         if(singleFile){
-                                filename = 'document_' + selectedIds[0] + '.pdf';
+                                var singleId = _this.isAllResultsSelected && _this.allResultDocumentIds.length > 0 ? _this.allResultDocumentIds[0] : selectedIds[0];
+                                filename = 'document_' + singleId + '.pdf';
                         }
 
                         var match = contentDisposition.match(/filename="?([^";]+)"?/i);
@@ -292,8 +352,9 @@ approvalClass.prototype = {
                         link.remove();
                         window.URL.revokeObjectURL(url);
 
-                        _this.updateStatusMessage(selectedIds.length + '/' + selectedIds.length + '건 저장 완료');
-                        _this.showToast('PDF 저장을 완료했습니다.');
+                        _this.updateStatusMessage(totalTargetCount + '/' + totalTargetCount + '건 저장 완료');
+                        var successMessage = _this.isAllResultsSelected ? ('검색 결과 ' + totalTargetCount + '건의 PDF 저장을 완료했습니다.') : 'PDF 저장을 완료했습니다.';
+                        _this.showToast(successMessage);
                 }).catch(function(error){
                         console.error(error);
                         _this.updateStatusMessage('PDF 생성에 실패했습니다.');
@@ -326,9 +387,15 @@ approvalClass.prototype = {
 
         buildQueryParams : function()
         {
+                var filters = _this.buildFilterParams();
+                filters.page = _this.PAGE;
+                filters.perPage = _this.PER_PAGE;
+                return filters;
+        },
+
+        buildFilterParams : function()
+        {
                 return {
-                        page: _this.PAGE,
-                        perPage: _this.PER_PAGE,
                         searchWord: _this.SEARCH_WORD,
                         searchDrafter: _this.SEARCH_DRAFTER,
                         startDate: _this.SEARCH_START_DATE,
@@ -396,6 +463,38 @@ approvalClass.prototype = {
                         if(_this._activeFetchController === controller){
                                 _this._activeFetchController = null;
                         }
+                });
+        },
+
+        fetchAllDocumentIds : function()
+        {
+                var filterParams = _this.buildFilterParams();
+                var query = new URLSearchParams();
+
+                _.each(filterParams, function(value, key){
+                        if(value === undefined || value === null){
+                                return;
+                        }
+
+                        query.append(key, value);
+                });
+
+                var queryString = query.toString();
+                var url = '/api/documents/ids' + (queryString !== '' ? ('?' + queryString) : '');
+
+                return fetch(url, {
+                        credentials: 'include'
+                }).then(function(response){
+                        if(response.ok){
+                                return response.json();
+                        }
+
+                        return response.json().catch(function(){ return {}; }).then(function(errorBody){
+                                var message = (errorBody && errorBody.error) ? errorBody.error : '문서 번호를 불러올 수 없습니다.';
+                                var err = new Error(message);
+                                err.status = response.status;
+                                throw err;
+                        });
                 });
         },
 
@@ -468,6 +567,85 @@ approvalClass.prototype = {
                                         _this.schedulePageLoad();
                                 }
                         });
+        },
+
+        enableAllResultsSelection : function()
+        {
+                if(_this._isFetchingAllIds){
+                        return;
+                }
+
+                _this._selectionSnapshot = new Set(_this.selectedDocumentIds);
+                _this._isFetchingAllIds = true;
+                _this.updateStatusMessage('검색 결과 전체를 불러오는 중...');
+                _this.showLoadingState(true);
+
+                _this.fetchAllDocumentIds()
+                        .then(function(payload){
+                                var ids = (payload && _.isArray(payload.documentIds)) ? payload.documentIds : [];
+                                var normalizedIds = _.map(ids, function(id){ return String(id); });
+
+                                if(normalizedIds.length === 0){
+                                        _this.showToast('검색 조건에 맞는 문서가 없습니다.', true);
+                                        _this.disableAllResultsSelection(true);
+                                        _this.updateStatusMessage('');
+                                        return;
+                                }
+
+                                _this.isAllResultsSelected = true;
+                                _this.allResultDocumentIds = normalizedIds;
+                                _this.selectedDocumentIds = new Set(normalizedIds);
+
+                                _this.applySelectionState();
+                                _this.updateSelectAllState();
+                                _this.updateAllSelectionToggleUI();
+                                _this.updateSelectionStatus();
+                                _this.updateStatusMessage('검색 결과 전체 ' + normalizedIds.length + '건이 선택되었습니다.');
+                                _this.showToast('검색 결과 전체 ' + normalizedIds.length + '건을 선택했습니다.');
+                        })
+                        .catch(function(error){
+                                console.error(error);
+                                _this.showToast(error && error.message ? error.message : '문서 번호를 불러오는 중 오류가 발생했습니다.', true);
+                                _this.disableAllResultsSelection(true);
+                                _this.updateStatusMessage('');
+                        })
+                        .finally(function(){
+                                _this._isFetchingAllIds = false;
+                                _this.showLoadingState(false);
+                        });
+        },
+
+        disableAllResultsSelection : function(skipStatusReset)
+        {
+                _this.isAllResultsSelected = false;
+                _this.allResultDocumentIds = [];
+
+                if(_this._selectionSnapshot){
+                        _this.selectedDocumentIds = new Set(_this._selectionSnapshot);
+                }else{
+                        _this.selectedDocumentIds = new Set();
+                }
+
+                _this._selectionSnapshot = null;
+                _this.applySelectionState();
+                _this.updateSelectAllState();
+                _this.updateAllSelectionToggleUI();
+                _this.updateSelectionStatus();
+
+                if(!skipStatusReset){
+                        _this.updateStatusMessage('');
+                }
+        },
+
+        toggleSelectAllResults : function()
+        {
+                if(_this.isAllResultsSelected){
+                        _this.disableAllResultsSelection();
+                        _this.showToast('검색 결과 전체 선택을 해제했습니다.');
+                        return;
+                }
+
+                _this.enableAllResultsSelection();
         },
 
         pageNavi : function()
@@ -820,6 +998,10 @@ $j(document).ready(function(){
 
         $j(document).on('click', '#toggle_select_all', function(){
                 Approval.toggleSelectAllForPage();
+        });
+
+        $j(document).on('click', '#toggle_select_all_results', function(){
+                Approval.toggleSelectAllResults();
         });
 
         $j(document).on('click', '#bulk_download_pdf', function(){
