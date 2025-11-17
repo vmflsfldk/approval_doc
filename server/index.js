@@ -191,7 +191,7 @@ function buildBindingScript(doc) {
         span.appendChild(link);
 
         if (file.file_size) {
-          span.appendChild(document.createTextNode(` (${file.file_size})`));
+          span.appendChild(document.createTextNode(' (' + file.file_size + ')'));
         }
 
         return span;
