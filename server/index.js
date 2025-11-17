@@ -86,16 +86,29 @@ async function renderPdfBuffers(documents) {
     browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     const results = [];
+    const failures = [];
 
     for (const doc of documents) {
-      const html = buildDocumentHtml(doc);
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      const buffer = await page.pdf({ format: 'A4', printBackground: true });
-      const filename = `${doc.document_code || doc.no || 'document'}.pdf`;
-      results.push({ buffer, filename });
+      const identifier = doc.document_code || doc.no || 'document';
+      try {
+        const html = buildDocumentHtml(doc);
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const pdfOutput = await page.pdf({ format: 'A4', printBackground: true });
+        const buffer = Buffer.isBuffer(pdfOutput) ? pdfOutput : Buffer.from(pdfOutput);
+
+        if (!Buffer.isBuffer(buffer)) {
+          throw new Error('PDF output is not a valid Buffer');
+        }
+
+        const filename = `${identifier}.pdf`;
+        results.push({ buffer, filename });
+      } catch (error) {
+        console.error(`PDF render error for document ${identifier}:`, error);
+        failures.push({ document: identifier, reason: error && error.message ? error.message : 'Unknown error' });
+      }
     }
 
-    return results;
+    return { pdfs: results, failures };
   } finally {
     if (browser) {
       await browser.close();
@@ -298,12 +311,33 @@ app.post('/api/documents/pdf', async (req, res) => {
       return res.status(404).json({ error: '요청한 문서를 찾을 수 없습니다.' });
     }
 
-    const pdfBuffers = await renderPdfBuffers(documents);
+    const { pdfs, failures } = await renderPdfBuffers(documents);
+    const validationFailures = [];
+    const validPdfs = [];
 
-    if (pdfBuffers.length === 1) {
+    pdfs.forEach((item) => {
+      const filename = typeof item.filename === 'string' && item.filename.trim() ? item.filename.trim() : null;
+      if (!Buffer.isBuffer(item.buffer) || !filename) {
+        validationFailures.push({ document: filename || 'unknown', reason: 'Invalid PDF buffer or filename' });
+        return;
+      }
+
+      validPdfs.push({ buffer: item.buffer, filename });
+    });
+
+    const failedDocuments = [...failures, ...validationFailures];
+
+    if (failedDocuments.length > 0 || validPdfs.length === 0) {
+      return res.status(500).json({
+        error: '일부 문서의 PDF 생성에 실패했습니다.',
+        failedDocuments,
+      });
+    }
+
+    if (validPdfs.length === 1) {
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${pdfBuffers[0].filename}"`);
-      return res.send(pdfBuffers[0].buffer);
+      res.setHeader('Content-Disposition', `attachment; filename="${validPdfs[0].filename}"`);
+      return res.send(validPdfs[0].buffer);
     }
 
     res.setHeader('Content-Type', 'application/zip');
@@ -315,7 +349,7 @@ app.post('/api/documents/pdf', async (req, res) => {
     });
 
     archive.pipe(res);
-    pdfBuffers.forEach((item) => archive.append(item.buffer, { name: item.filename }));
+    validPdfs.forEach((item) => archive.append(item.buffer, { name: item.filename }));
     await archive.finalize();
   } catch (error) {
     console.error('PDF generation error:', error);
